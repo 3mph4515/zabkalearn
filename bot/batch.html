@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Poster | Zabka Learn</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --green: #4CAF50;
+            --green-light: #81C784;
+            --green-bg: #E8F5E9;
+            --red: #E53935;
+            --dark: #1A1A1A;
+            --gray: #666;
+            --gray-light: #999;
+            --border: #E0E0E0;
+            --shadow: 0 4px 20px rgba(0,0,0,0.07);
+            --r: 12px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--green-bg) 0%, #C8E6C9 100%);
+            min-height: 100vh;
+            padding: 16px;
+            color: var(--dark);
+        }
+        .wrap { max-width: 1280px; margin: 0 auto; }
+
+        /* ── Header ── */
+        .hdr { text-align:center; margin-bottom:18px; }
+        .hdr h1 { font-family:'Poppins',sans-serif; font-size:1.5rem; color:#2E7D32; }
+        .hdr .conn {
+            display:inline-flex; align-items:center; gap:5px; margin-top:6px;
+            padding:3px 12px; background:#fff; border-radius:16px; font-size:.78rem;
+            box-shadow: var(--shadow);
+        }
+        .dot { width:7px;height:7px;border-radius:50%;background:#ccc; }
+        .dot.ok { background:var(--green); }
+        .dot.err { background:var(--red); }
+
+        /* ── Top bar ── */
+        .topbar {
+            background:#fff; border-radius:var(--r); padding:14px 20px;
+            margin-bottom:16px; box-shadow:var(--shadow);
+            display:flex; flex-wrap:wrap; gap:16px; align-items:end;
+        }
+        .fg { display:flex; flex-direction:column; gap:3px; }
+        .fg label { font-size:.7rem; font-weight:600; color:var(--gray); text-transform:uppercase; letter-spacing:.4px; }
+        .fg select, .fg input[type=date], .fg input[type=text] {
+            padding:7px 10px; border:2px solid var(--border); border-radius:8px;
+            font-size:.85rem; font-family:inherit; outline:none; transition:border .2s;
+        }
+        .fg select:focus, .fg input:focus { border-color:var(--green); }
+
+        .ch-tog { display:flex; border:2px solid var(--border); border-radius:8px; overflow:hidden; }
+        .ch-tog button {
+            padding:7px 14px; border:none; background:#fff;
+            font-family:inherit; font-size:.82rem; cursor:pointer; transition:all .15s;
+        }
+        .ch-tog button.on { background:var(--green); color:#fff; font-weight:600; }
+        .ch-tog button:not(.on):hover { background:var(--green-bg); }
+
+        /* ── Template ── */
+        .tpl-section {
+            background:#fff; border-radius:var(--r); padding:14px 20px;
+            margin-bottom:16px; box-shadow:var(--shadow);
+        }
+        .tpl-section summary {
+            font-family:'Poppins',sans-serif; font-size:.95rem; font-weight:600;
+            color:#2E7D32; cursor:pointer; list-style:none; user-select:none;
+        }
+        .tpl-section summary::before { content:''; }
+        .tpl-section summary .arrow { display:inline-block; transition:transform .2s; margin-right:6px; }
+        .tpl-section[open] summary .arrow { transform:rotate(90deg); }
+        .tpl-editor {
+            margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:14px;
+        }
+        .tpl-editor textarea {
+            width:100%; min-height:140px; padding:10px; border:2px solid var(--border);
+            border-radius:8px; font-family:'JetBrains Mono',monospace,inherit;
+            font-size:.82rem; resize:vertical; outline:none; line-height:1.5;
+        }
+        .tpl-editor textarea:focus { border-color:var(--green); }
+        .tpl-preview-box {
+            background:#f7f7f7; border-radius:8px; padding:12px; font-size:.85rem;
+            line-height:1.6; white-space:pre-wrap; word-break:break-word;
+            border: 1px solid #eee; overflow-y:auto; max-height:200px;
+        }
+        .tpl-vars {
+            margin-top:8px; font-size:.72rem; color:var(--gray-light);
+        }
+        .tpl-vars code {
+            background:var(--green-bg); padding:1px 5px; border-radius:4px;
+            color:#2E7D32; font-weight:600; cursor:pointer;
+        }
+
+        /* ── Cards ── */
+        .sec-title {
+            font-family:'Poppins',sans-serif; font-size:1rem; color:#2E7D32;
+            margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;
+        }
+        .cards { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
+
+        .card {
+            background:#fff; border-radius:var(--r); box-shadow:var(--shadow);
+            overflow:hidden; transition:box-shadow .15s;
+        }
+        .card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.1); }
+        .card.open { box-shadow: 0 6px 28px rgba(76,175,80,0.15); }
+
+        /* collapsed row */
+        .card-row {
+            display:flex; align-items:center; padding:12px 16px; gap:12px; cursor:pointer;
+            user-select:none;
+        }
+        .card-row:hover { background:#fafafa; }
+        .cnum {
+            width:28px;height:28px;border-radius:50%;background:var(--green-bg);
+            color:#2E7D32;display:flex;align-items:center;justify-content:center;
+            font-weight:700;font-size:.8rem;flex-shrink:0;
+        }
+        .cword { font-weight:700; color:#2E7D32; flex:1; min-width:0; }
+        .cword small { font-weight:400; color:var(--gray); margin-left:6px; }
+        .ctime { font-size:.8rem; color:#555; font-weight:500; white-space:nowrap; }
+        .card-row .mini-cv { width:64px;height:42px;border-radius:5px;overflow:hidden;border:1px solid #eee;flex-shrink:0; }
+        .card-row .mini-cv canvas { width:100%;height:100%; }
+        .cbtns { display:flex; gap:2px; }
+        .cbtns button {
+            width:28px;height:28px;border:none;border-radius:6px;background:transparent;
+            cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;
+            transition:background .12s;
+        }
+        .cbtns button:hover { background:#f0f0f0; }
+        .cbtns .del:hover { background:#FFEBEE; }
+
+        /* expanded editor */
+        .card-body { display:none; border-top:1px solid #f0f0f0; }
+        .card.open .card-body { display:block; }
+
+        .card-editor {
+            display:grid; grid-template-columns:1fr 1fr; gap:0;
+        }
+
+        .card-fields { padding:16px; border-right:1px solid #f0f0f0; }
+
+        .frow { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+        .frow.full { grid-template-columns:1fr; }
+        .ff label {
+            display:block; font-size:.7rem; font-weight:600; color:var(--gray);
+            text-transform:uppercase; letter-spacing:.4px; margin-bottom:3px;
+        }
+        .ff input, .ff textarea {
+            width:100%; padding:8px 10px; border:2px solid var(--border); border-radius:8px;
+            font-size:.88rem; font-family:inherit; outline:none; transition:border .2s; resize:none;
+        }
+        .ff input:focus, .ff textarea:focus { border-color:var(--green); }
+        .ff textarea.post-text { min-height:100px; font-size:.82rem; line-height:1.5; }
+
+        /* examples */
+        .examples-block { margin-bottom:10px; }
+        .example-pair {
+            display:grid; grid-template-columns:1fr 1fr 28px; gap:6px; margin-bottom:6px; align-items:end;
+        }
+        .example-pair .ff { margin:0; }
+        .example-pair .rm-ex {
+            width:28px;height:28px;border:none;border-radius:6px;background:transparent;
+            cursor:pointer;font-size:.85rem;color:var(--gray-light);transition:all .12s;
+            display:flex;align-items:center;justify-content:center;margin-bottom:1px;
+        }
+        .example-pair .rm-ex:hover { background:#FFEBEE; color:var(--red); }
+        .add-ex-btn {
+            font-size:.78rem; color:var(--green); background:none; border:none;
+            cursor:pointer; font-weight:600; padding:2px 0;
+        }
+        .add-ex-btn:hover { text-decoration:underline; }
+
+        /* text mode toggle */
+        .text-toggle {
+            display:flex; gap:0; border:1px solid var(--border); border-radius:6px;
+            overflow:hidden; margin-bottom:8px; width:fit-content;
+        }
+        .text-toggle button {
+            padding:4px 12px; border:none; background:#fff;
+            font-family:inherit; font-size:.75rem; cursor:pointer; transition:all .12s;
+        }
+        .text-toggle button.on { background:var(--green); color:#fff; font-weight:600; }
+
+        /* card preview panel */
+        .card-preview { padding:16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; }
+        .card-preview .preview-label {
+            font-size:.7rem; font-weight:600; color:var(--gray); text-transform:uppercase; letter-spacing:.4px;
+        }
+        .card-preview canvas {
+            width:100%; border-radius:8px; border:1px solid #eee;
+        }
+        .post-preview {
+            background:#f7f7f7; border-radius:8px; padding:10px 12px;
+            font-size:.84rem; line-height:1.6; white-space:pre-wrap; word-break:break-word;
+            border:1px solid #eee; min-height:60px; max-height:220px; overflow-y:auto;
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            padding:8px 18px; border:none; border-radius:9px; font-family:inherit;
+            font-size:.85rem; font-weight:600; cursor:pointer; transition:all .15s;
+            display:inline-flex; align-items:center; gap:5px;
+        }
+        .btn:disabled { opacity:.45; cursor:not-allowed; transform:none!important; }
+        .btn-g { background:var(--green); color:#fff; }
+        .btn-g:hover:not(:disabled) { background:#43A047; transform:translateY(-1px); }
+        .btn-o { background:#fff; color:var(--dark); border:2px solid var(--border); }
+        .btn-o:hover:not(:disabled) { border-color:var(--green); }
+        .btn-r { background:var(--red); color:#fff; }
+        .btn-sm { padding:5px 12px; font-size:.78rem; }
+
+        .acts { display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap; }
+        .acts .spacer { flex:1; }
+
+        /* ── Scheduled ── */
+        .sched { margin-top:8px; }
+        .sched-list { background:#fff; border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden; }
+        .si {
+            display:flex; align-items:center; padding:10px 16px; gap:12px;
+            border-bottom:1px solid #f5f5f5;
+        }
+        .si:last-child { border-bottom:none; }
+        .si .sd { font-weight:600; font-size:.82rem; color:#555; white-space:nowrap; min-width:120px; }
+        .si .st { flex:1; font-size:.82rem; color:#777; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .si .mb { font-size:.68rem; padding:2px 7px; border-radius:8px; background:var(--green-bg); color:#2E7D32; font-weight:600; }
+
+        .empty { text-align:center; padding:32px 16px; color:var(--gray-light); background:#fff; border-radius:var(--r); box-shadow:var(--shadow); }
+        .empty .ico { font-size:2rem; margin-bottom:8px; }
+
+        /* ── Toast ── */
+        .toasts { position:fixed; top:16px; right:16px; z-index:1000; display:flex; flex-direction:column; gap:6px; }
+        .toast {
+            padding:10px 18px; border-radius:9px; color:#fff; font-size:.82rem; font-weight:500;
+            box-shadow:0 4px 12px rgba(0,0,0,.15);
+            animation: tIn .25s ease, tOut .25s ease 2.7s forwards;
+        }
+        .toast.ok { background:var(--green); }
+        .toast.er { background:var(--red); }
+        .toast.in { background:#1976D2; }
+        @keyframes tIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:none} }
+        @keyframes tOut { to{opacity:0;transform:translateX(30px)} }
+
+        /* ── Loading ── */
+        .ov { position:fixed;inset:0;background:rgba(255,255,255,.8);display:none;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:10px; }
+        .ov.on { display:flex; }
+        .sp { width:36px;height:36px;border:3px solid #E0E0E0;border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+
+        /* ── Import modal ── */
+        .modal-bg { position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:1001; }
+        .modal-bg.on { display:flex; }
+        .modal {
+            background:#fff; border-radius:var(--r); padding:22px; width:90%; max-width:620px;
+            box-shadow:0 16px 50px rgba(0,0,0,.2);
+        }
+        .modal h3 { font-family:'Poppins',sans-serif; color:#2E7D32; margin-bottom:10px; }
+        .modal textarea {
+            width:100%; height:180px; padding:10px; border:2px solid var(--border);
+            border-radius:8px; font-family:'JetBrains Mono',monospace,inherit;
+            font-size:.82rem; resize:vertical; outline:none;
+        }
+        .modal textarea:focus { border-color:var(--green); }
+        .modal .hint { font-size:.72rem; color:var(--gray-light); margin:6px 0 14px; line-height:1.5; }
+        .modal .macts { display:flex; gap:8px; justify-content:flex-end; }
+
+        /* ── Drag ── */
+        .card.dragging { opacity:.35; }
+        .card.drag-over { border-top:3px solid var(--green); }
+
+        /* ── Responsive ── */
+        @media(max-width:900px) {
+            .card-editor { grid-template-columns:1fr; }
+            .card-fields { border-right:none; border-bottom:1px solid #f0f0f0; }
+            .frow { grid-template-columns:1fr; }
+            .tpl-editor { grid-template-columns:1fr; }
+            .example-pair { grid-template-columns:1fr 1fr 28px; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <div class="hdr">
+        <h1>Batch Poster</h1>
+        <div class="conn"><span class="dot" id="dot"></span><span id="connTxt">...</span></div>
+    </div>
+
+    <!-- Top bar -->
+    <div class="topbar">
+        <div class="fg">
+            <label>Channel</label>
+            <div class="ch-tog" id="chTog">
+                <button class="on" data-ch="debug">Debug</button>
+                <button data-ch="production">Prod</button>
+            </div>
+        </div>
+        <div class="fg">
+            <label>Daily at</label>
+            <select id="defHour">
+                <option value="8">08:00</option><option value="9">09:00</option>
+                <option value="10" selected>10:00</option><option value="11">11:00</option>
+                <option value="12">12:00</option><option value="13">13:00</option>
+                <option value="14">14:00</option><option value="15">15:00</option>
+                <option value="16">16:00</option><option value="17">17:00</option>
+                <option value="18">18:00</option><option value="19">19:00</option>
+                <option value="20">20:00</option>
+            </select>
+        </div>
+        <div class="fg">
+            <label>Start date</label>
+            <input type="date" id="startDate">
+        </div>
+        <div class="fg">
+            <label>Rubric</label>
+            <select id="defRubric">
+                <option value="slowo">Slowo dnia</option>
+                <option value="ciekawostka">Ciekawostka</option>
+                <option value="blad">Blad dnia</option>
+                <option value="custom">Custom</option>
+            </select>
+        </div>
+        <div class="fg">
+            <label>Send image</label>
+            <select id="sendImage">
+                <option value="yes">Image + text</option>
+                <option value="no">Text only</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Template -->
+    <details class="tpl-section" id="tplSection">
+        <summary><span class="arrow">&#9654;</span> Post template</summary>
+        <div class="tpl-editor">
+            <div>
+                <textarea id="tplText" spellcheck="false">&#x1F438; <b>S&#x142;owo dnia</b>
+
+&#x1F1F5;&#x1F1F1; <b>{word}</b> &#x2014; {translation}
+
+{examples}
+
+#s&#x142;owodnia #polski
+@zabka_learn</textarea>
+                <div class="tpl-vars">
+                    Variables:
+                    <code onclick="insertVar('{word}')">{word}</code>
+                    <code onclick="insertVar('{translation}')">{translation}</code>
+                    <code onclick="insertVar('{examples}')">{examples}</code>
+                    <code onclick="insertVar('{rubric}')">{rubric}</code>
+                    <code onclick="insertVar('{rubric_emoji}')">{rubric_emoji}</code>
+                </div>
+            </div>
+            <div>
+                <div class="preview-label" style="font-size:.7rem;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Preview (sample)</div>
+                <div class="tpl-preview-box" id="tplPreview"></div>
+            </div>
+        </div>
+    </details>
+
+    <!-- Cards -->
+    <div class="sec-title">
+        <span>Cards (<span id="cnt">0</span>)</span>
+    </div>
+
+    <div class="cards" id="cardsList"></div>
+
+    <div class="acts">
+        <button class="btn btn-g" id="addBtn">+ Dodaj</button>
+        <button class="btn btn-o" id="importBtn">Import</button>
+        <button class="btn btn-o" id="exportBtn">Export</button>
+        <div class="spacer"></div>
+        <button class="btn btn-g" id="schedBtn" disabled>Zaplanuj wszystko</button>
+    </div>
+
+    <!-- Scheduled -->
+    <div class="sched">
+        <div class="sec-title">
+            <span>Scheduled</span>
+            <button class="btn btn-sm btn-o" id="refBtn">Refresh</button>
+        </div>
+        <div class="sched-list" id="schedList">
+            <div class="empty" style="padding:20px">Click Refresh</div>
+        </div>
+    </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+<div class="ov" id="ov"><div class="sp"></div><div id="ovTxt">...</div></div>
+
+<!-- Import modal -->
+<div class="modal-bg" id="impModal">
+    <div class="modal">
+        <h3>Import</h3>
+        <textarea id="impText" placeholder="szukac | search | Szukam pracy | I'm looking for a job&#10;robic | do/make | Co robisz? | What are you doing?&#10;&#10;Format: word | translation | example_pl | example_ru&#10;Multiple examples: add more | pairs after translation"></textarea>
+        <div class="hint">
+            <b>Format:</b> word | translation | ex_pl | ex_ru | ex2_pl | ex2_ru | ...<br>
+            One card per line. Examples are optional pairs (Polish | Russian).
+        </div>
+        <div class="macts">
+            <button class="btn btn-o" onclick="closeImp()">Cancel</button>
+            <button class="btn btn-g" onclick="doImport()">Import</button>
+        </div>
+    </div>
+</div>
+
+<!-- hidden render canvas -->
+<canvas id="rcv" width="1080" height="720" style="display:none"></canvas>
+
+<script>
+// ═══════════════════ CONFIG ═══════════════════
+const CW = 1080, CH = 720;
+const RUBRICS = {
+    slowo:       { badge: 'SLOWO DNIA',       emoji: '\uD83D\uDCD6', color: '#E53935' },
+    ciekawostka: { badge: 'CIEKAWOSTKA DNIA', emoji: '\uD83D\uDC38', color: '#1976D2' },
+    blad:        { badge: 'BLAD DNIA',        emoji: '\u26A0\uFE0F', color: '#F57C00' },
+    custom:      { badge: 'ZABKA LEARN',      emoji: '\uD83D\uDC38', color: '#4CAF50' },
+};
+
+let cards = [];
+let channel = 'debug';
+let openIdx = -1; // which card is expanded
+
+// ═══════════════════ INIT ═══════════════════
+document.addEventListener('DOMContentLoaded', () => {
+    const tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
+    document.getElementById('startDate').value = tmr.toISOString().split('T')[0];
+
+    loadState();
+    checkConn();
+    updateTplPreview();
+
+    // channel toggle
+    document.querySelectorAll('#chTog button').forEach(b => {
+        b.addEventListener('click', () => {
+            document.querySelectorAll('#chTog button').forEach(x => x.classList.remove('on'));
+            b.classList.add('on');
+            channel = b.dataset.ch;
+            save();
+        });
+    });
+
+    // template live preview
+    document.getElementById('tplText').addEventListener('input', updateTplPreview);
+
+    // settings changes
+    ['defHour','startDate','defRubric','sendImage'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => { recalcDates(); save(); });
+    });
+
+    document.getElementById('addBtn').addEventListener('click', () => addCard());
+    document.getElementById('importBtn').addEventListener('click', () => document.getElementById('impModal').classList.add('on'));
+    document.getElementById('exportBtn').addEventListener('click', doExport);
+    document.getElementById('schedBtn').addEventListener('click', scheduleAll);
+    document.getElementById('refBtn').addEventListener('click', loadScheduled);
+});
+
+// ═══════════════════ CONNECTION ═══════════════════
+async function checkConn() {
+    try {
+        const r = await fetch('/api/status');
+        const d = await r.json();
+        if (d.ok) {
+            document.getElementById('dot').className = 'dot ok';
+            document.getElementById('connTxt').textContent = d.account;
+        } else throw 0;
+    } catch {
+        document.getElementById('dot').className = 'dot err';
+        document.getElementById('connTxt').textContent = 'Offline';
+    }
+}
+
+// ═══════════════════ TEMPLATE ═══════════════════
+function getTemplate() {
+    return document.getElementById('tplText').value;
+}
+
+function expandTemplate(tpl, card) {
+    const rb = RUBRICS[card.rubric || 'slowo'];
+    let exText = '';
+    if (card.examples && card.examples.length) {
+        exText = card.examples
+            .filter(e => e.pl)
+            .map(e => {
+                let s = '\uD83D\uDCDD <i>' + e.pl + '</i>';
+                if (e.ru) s += '\n(' + e.ru + ')';
+                return s;
+            })
+            .join('\n\n');
+    }
+    return tpl
+        .replace(/\{word\}/g, card.word || '...')
+        .replace(/\{translation\}/g, card.translation || '...')
+        .replace(/\{examples\}/g, exText)
+        .replace(/\{rubric\}/g, rb.badge)
+        .replace(/\{rubric_emoji\}/g, rb.emoji);
+}
+
+function updateTplPreview() {
+    const sample = {
+        word: 'szukac', translation: '\u0438\u0441\u043A\u0430\u0442\u044C',
+        examples: [{pl: 'Szukam pracy w Warszawie', ru: '\u0418\u0449\u0443 \u0440\u0430\u0431\u043E\u0442\u0443 \u0432 \u0412\u0430\u0440\u0448\u0430\u0432\u0435'}],
+        rubric: document.getElementById('defRubric').value,
+    };
+    const html = expandTemplate(getTemplate(), sample);
+    document.getElementById('tplPreview').innerHTML = renderTgHtml(html);
+}
+
+function insertVar(v) {
+    const ta = document.getElementById('tplText');
+    const start = ta.selectionStart;
+    ta.value = ta.value.slice(0, start) + v + ta.value.slice(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = start + v.length;
+    ta.focus();
+    updateTplPreview();
+}
+
+function renderTgHtml(html) {
+    // simple Telegram HTML subset rendering for preview
+    return html
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/&lt;b&gt;(.*?)&lt;\/b&gt;/gs, '<b>$1</b>')
+        .replace(/&lt;i&gt;(.*?)&lt;\/i&gt;/gs, '<i>$1</i>')
+        .replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/gs, '<u>$1</u>')
+        .replace(/&lt;code&gt;(.*?)&lt;\/code&gt;/gs, '<code>$1</code>')
+        .replace(/\n/g, '<br>');
+}
+
+// ═══════════════════ CARD OPS ═══════════════════
+function addCard(word, translation, examples) {
+    cards.push({
+        word: word || '',
+        translation: translation || '',
+        examples: examples || [{pl:'', ru:''}],
+        rubric: document.getElementById('defRubric').value,
+        useTemplate: true,
+        customText: '',
+        scheduleTime: '',
+    });
+    recalcDates();
+    render();
+    save();
+    if (!word) toggleCard(cards.length - 1);
+}
+
+function removeCard(idx) {
+    cards.splice(idx, 1);
+    if (openIdx === idx) openIdx = -1;
+    else if (openIdx > idx) openIdx--;
+    recalcDates();
+    render();
+    save();
+}
+
+function dupeCard(idx) {
+    const c = JSON.parse(JSON.stringify(cards[idx]));
+    cards.splice(idx + 1, 0, c);
+    recalcDates();
+    render();
+    save();
+}
+
+function toggleCard(idx) {
+    openIdx = openIdx === idx ? -1 : idx;
+    render();
+}
+
+function moveCard(from, to) {
+    const [c] = cards.splice(from, 1);
+    cards.splice(to, 0, c);
+    if (openIdx === from) openIdx = to;
+    else if (openIdx > from && openIdx <= to) openIdx--;
+    else if (openIdx < from && openIdx >= to) openIdx++;
+    recalcDates();
+    render();
+    save();
+}
+
+// ═══════════════════ DATES ═══════════════════
+function recalcDates() {
+    const sd = document.getElementById('startDate').value;
+    const h = parseInt(document.getElementById('defHour').value);
+    if (!sd) return;
+    cards.forEach((c, i) => {
+        const d = new Date(sd);
+        d.setDate(d.getDate() + i);
+        d.setHours(h, 0, 0, 0);
+        c.scheduleTime = fmt_iso(d);
+    });
+    document.getElementById('schedBtn').disabled = !cards.length;
+}
+
+function fmt_iso(d) {
+    const pad = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fmt_dt(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const wd = ['Nd','Pn','Wt','Sr','Cz','Pt','Sb'][d.getDay()];
+    const pad = n => String(n).padStart(2,'0');
+    return `${wd} ${pad(d.getDate())}.${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ═══════════════════ GET POST TEXT ═══════════════════
+function getPostText(card) {
+    if (!card.useTemplate && card.customText) return card.customText;
+    return expandTemplate(getTemplate(), card);
+}
+
+// ═══════════════════ RENDER UI ═══════════════════
+function render() {
+    const box = document.getElementById('cardsList');
+    document.getElementById('cnt').textContent = cards.length;
+    document.getElementById('schedBtn').disabled = !cards.length;
+
+    if (!cards.length) {
+        box.innerHTML = '<div class="empty"><div class="ico">\uD83D\uDCDD</div><div>No cards. Click + Dodaj.</div></div>';
+        return;
+    }
+
+    box.innerHTML = '';
+    cards.forEach((c, i) => {
+        const isOpen = i === openIdx;
+        const el = document.createElement('div');
+        el.className = 'card' + (isOpen ? ' open' : '');
+        el.draggable = true;
+        el.dataset.idx = i;
+        el.addEventListener('dragstart', onDS);
+        el.addEventListener('dragover', onDO);
+        el.addEventListener('dragleave', onDL);
+        el.addEventListener('drop', onDD);
+        el.addEventListener('dragend', onDE);
+
+        // collapsed row
+        const row = document.createElement('div');
+        row.className = 'card-row';
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('.cbtns')) return;
+            toggleCard(i);
+        });
+        row.innerHTML = `
+            <div class="cnum">${i+1}</div>
+            <div class="cword">${esc(c.word) || '<span style="color:#bbb">New...</span>'}<small>${esc(c.translation)}</small></div>
+            <div class="mini-cv"><canvas width="216" height="144" data-mi="${i}"></canvas></div>
+            <div class="ctime">${fmt_dt(c.scheduleTime)}</div>
+            <div class="cbtns">
+                <button title="Duplicate" onclick="event.stopPropagation();dupeCard(${i})">\uD83D\uDCCB</button>
+                <button class="del" title="Delete" onclick="event.stopPropagation();removeCard(${i})">\uD83D\uDDD1</button>
+            </div>
+        `;
+        el.appendChild(row);
+
+        // expanded body
+        if (isOpen) {
+            const body = document.createElement('div');
+            body.className = 'card-body';
+            body.style.display = 'block';
+
+            const editor = document.createElement('div');
+            editor.className = 'card-editor';
+
+            // ── left: fields ──
+            const fields = document.createElement('div');
+            fields.className = 'card-fields';
+
+            // word + translation
+            fields.innerHTML = `
+                <div class="frow">
+                    <div class="ff">
+                        <label>Slowo</label>
+                        <input type="text" value="${esc(c.word)}" data-f="word" data-i="${i}" placeholder="e.g. szukac">
+                    </div>
+                    <div class="ff">
+                        <label>Translation</label>
+                        <input type="text" value="${esc(c.translation)}" data-f="translation" data-i="${i}" placeholder="e.g. \u0438\u0441\u043A\u0430\u0442\u044C">
+                    </div>
+                </div>
+            `;
+
+            // examples
+            const exBlock = document.createElement('div');
+            exBlock.className = 'examples-block';
+            const exLabel = document.createElement('label');
+            exLabel.style.cssText = 'display:block;font-size:.7rem;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;';
+            exLabel.textContent = 'Examples';
+            exBlock.appendChild(exLabel);
+
+            (c.examples || []).forEach((ex, ei) => {
+                const pair = document.createElement('div');
+                pair.className = 'example-pair';
+                pair.innerHTML = `
+                    <div class="ff"><input type="text" value="${esc(ex.pl)}" data-ex="${ei}" data-exf="pl" data-i="${i}" placeholder="Po polsku..."></div>
+                    <div class="ff"><input type="text" value="${esc(ex.ru)}" data-ex="${ei}" data-exf="ru" data-i="${i}" placeholder="\u041F\u0435\u0440\u0435\u0432\u043E\u0434..."></div>
+                    <button class="rm-ex" onclick="rmExample(${i},${ei})" title="Remove">\u2715</button>
+                `;
+                exBlock.appendChild(pair);
+            });
+
+            const addExBtn = document.createElement('button');
+            addExBtn.className = 'add-ex-btn';
+            addExBtn.textContent = '+ Add example';
+            addExBtn.onclick = () => { addExample(i); };
+            exBlock.appendChild(addExBtn);
+            fields.appendChild(exBlock);
+
+            // schedule time
+            fields.innerHTML += `
+                <div class="frow">
+                    <div class="ff">
+                        <label>Schedule time</label>
+                        <input type="datetime-local" value="${c.scheduleTime||''}" data-f="scheduleTime" data-i="${i}">
+                    </div>
+                    <div class="ff">
+                        <label>Rubric</label>
+                        <select data-f="rubric" data-i="${i}">
+                            ${Object.entries(RUBRICS).map(([k,v]) => `<option value="${k}" ${c.rubric===k?'selected':''}>${v.emoji} ${v.badge}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            `;
+
+            // post text toggle + editor
+            const textSection = document.createElement('div');
+            textSection.innerHTML = `
+                <div class="text-toggle">
+                    <button class="${c.useTemplate?'on':''}" onclick="setTextMode(${i},true)">Template</button>
+                    <button class="${!c.useTemplate?'on':''}" onclick="setTextMode(${i},false)">Custom</button>
+                </div>
+            `;
+            if (!c.useTemplate) {
+                textSection.innerHTML += `
+                    <div class="ff">
+                        <label>Custom post text (HTML)</label>
+                        <textarea class="post-text" data-f="customText" data-i="${i}" spellcheck="false">${esc(c.customText || expandTemplate(getTemplate(), c))}</textarea>
+                    </div>
+                `;
+            }
+            fields.appendChild(textSection);
+
+            editor.appendChild(fields);
+
+            // ── right: preview ──
+            const prev = document.createElement('div');
+            prev.className = 'card-preview';
+            prev.innerHTML = `
+                <div class="preview-label">Card image</div>
+                <canvas width="1080" height="720" data-pv="${i}"></canvas>
+                <div class="preview-label">Post text</div>
+                <div class="post-preview" data-pp="${i}"></div>
+            `;
+            editor.appendChild(prev);
+
+            body.appendChild(editor);
+            el.appendChild(body);
+        }
+
+        box.appendChild(el);
+
+        // render mini preview
+        const miniCv = el.querySelector(`canvas[data-mi="${i}"]`);
+        if (miniCv) drawCard(miniCv.getContext('2d'), miniCv.width, miniCv.height, c);
+
+        // render full preview + post text
+        if (isOpen) {
+            const pvCv = el.querySelector(`canvas[data-pv="${i}"]`);
+            if (pvCv) drawCard(pvCv.getContext('2d'), pvCv.width, pvCv.height, c);
+            const pp = el.querySelector(`[data-pp="${i}"]`);
+            if (pp) pp.innerHTML = renderTgHtml(getPostText(c));
+        }
+    });
+
+    // attach input listeners
+    document.querySelectorAll('[data-f][data-i]').forEach(el => {
+        const ev = el.tagName === 'SELECT' ? 'change' : 'input';
+        el.addEventListener(ev, (e) => {
+            const idx = parseInt(e.target.dataset.i);
+            const field = e.target.dataset.f;
+            cards[idx][field] = e.target.value;
+            if (field === 'rubric' && cards[idx].useTemplate) {
+                // re-expand template preview
+            }
+            refreshPreview(idx);
+            save();
+        });
+    });
+
+    document.querySelectorAll('[data-ex][data-exf][data-i]').forEach(el => {
+        el.addEventListener('input', (e) => {
+            const idx = parseInt(e.target.dataset.i);
+            const ei = parseInt(e.target.dataset.ex);
+            const f = e.target.dataset.exf;
+            cards[idx].examples[ei][f] = e.target.value;
+            refreshPreview(idx);
+            save();
+        });
+    });
+
+    // select focus fix
+    document.querySelectorAll('.card-fields select[data-f]').forEach(sel => {
+        sel.style.padding = '7px 10px';
+        sel.style.border = '2px solid var(--border)';
+        sel.style.borderRadius = '8px';
+        sel.style.fontSize = '.85rem';
+        sel.style.fontFamily = 'inherit';
+        sel.style.outline = 'none';
+        sel.style.width = '100%';
+    });
+}
+
+function refreshPreview(idx) {
+    const c = cards[idx];
+    // mini
+    const mi = document.querySelector(`canvas[data-mi="${idx}"]`);
+    if (mi) drawCard(mi.getContext('2d'), mi.width, mi.height, c);
+    // full
+    const pv = document.querySelector(`canvas[data-pv="${idx}"]`);
+    if (pv) drawCard(pv.getContext('2d'), pv.width, pv.height, c);
+    // text
+    const pp = document.querySelector(`[data-pp="${idx}"]`);
+    if (pp) pp.innerHTML = renderTgHtml(getPostText(c));
+}
+
+function addExample(idx) {
+    cards[idx].examples.push({pl:'', ru:''});
+    render();
+    save();
+}
+
+function rmExample(idx, ei) {
+    cards[idx].examples.splice(ei, 1);
+    if (!cards[idx].examples.length) cards[idx].examples.push({pl:'', ru:''});
+    render();
+    save();
+}
+
+function setTextMode(idx, useTemplate) {
+    if (!useTemplate && cards[idx].useTemplate) {
+        cards[idx].customText = expandTemplate(getTemplate(), cards[idx]);
+    }
+    cards[idx].useTemplate = useTemplate;
+    render();
+    save();
+}
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════ CARD IMAGE ═══════════════════
+function drawCard(ctx, w, h, card) {
+    const s = w / CW;
+    const rb = RUBRICS[card.rubric || 'slowo'];
+
+    // bg
+    ctx.fillStyle = '#E8F5E9';
+    ctx.fillRect(0, 0, w, h);
+
+    // white card
+    const cx = 50*s, cy = 40*s, cw = (CW-100)*s, ch = (CH-80)*s;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.1)';
+    ctx.shadowBlur = 20*s;
+    ctx.shadowOffsetY = 4*s;
+    ctx.fillStyle = '#fff';
+    rr(ctx, cx, cy, cw, ch, 18*s);
+    ctx.fill();
+    ctx.restore();
+
+    // frog avatar
+    const ax = 80*s, ay = 68*s, ar = 20*s;
+    ctx.fillStyle = '#4CAF50';
+    ctx.beginPath(); ctx.arc(ax+ar, ay+ar, ar, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#81C784';
+    ctx.beginPath(); ctx.ellipse(ax+ar, ay+ar+2*s, 12*s, 9*s, 0, 0, Math.PI*2); ctx.fill();
+    // eyes
+    [[- 5, -4, 3.5, '#fff', -4.5, -3, 1.8], [5, -4, 3.5, '#fff', 5.5, -3, 1.8]].forEach(e => {
+        ctx.fillStyle = e[3];
+        ctx.beginPath(); ctx.arc(ax+ar+e[0]*s, ay+ar+e[1]*s, e[2]*s, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#1A1A1A';
+        ctx.beginPath(); ctx.arc(ax+ar+e[4]*s, ay+ar+e[5]*s, e[6]*s, 0, Math.PI*2); ctx.fill();
+    });
+
+    // header text
+    ctx.fillStyle = '#111';
+    ctx.font = `bold ${18*s}px Poppins,system-ui`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'start';
+    ctx.fillText('Zabka Learn', 130*s, 82*s);
+    ctx.fillStyle = '#666';
+    ctx.font = `${12*s}px Inter,system-ui`;
+    ctx.fillText('Polski iznutri', 130*s, 102*s);
+
+    // divider
+    ctx.strokeStyle = '#EEE';
+    ctx.lineWidth = 1*s;
+    ctx.beginPath(); ctx.moveTo(80*s, 130*s); ctx.lineTo((CW-80)*s, 130*s); ctx.stroke();
+
+    // badge
+    const badgeTxt = `${rb.emoji} ${rb.badge}`;
+    ctx.font = `600 ${13*s}px Inter,system-ui`;
+    const bw = ctx.measureText(badgeTxt).width + 28*s;
+    ctx.fillStyle = rb.color;
+    rr(ctx, 80*s, 145*s, bw, 32*s, 16*s);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(badgeTxt, 94*s, 161*s);
+
+    // main word
+    ctx.textAlign = 'center';
+    let wordY = 0.42;
+    const hasExamples = card.examples && card.examples.some(e => e.pl);
+    if (!hasExamples) wordY = 0.46;
+
+    ctx.fillStyle = '#2E7D32';
+    ctx.font = `800 ${clampFont(card.word||'...', 48, CW-200, ctx, s)}px Poppins,system-ui`;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(card.word || '...', w/2, h*wordY);
+
+    // translation
+    ctx.fillStyle = '#333';
+    ctx.font = `500 ${clampFont(card.translation||'', 26, CW-200, ctx, s)}px Inter,system-ui`;
+    ctx.fillText(card.translation || '', w/2, h*(wordY+0.10));
+
+    // first example
+    if (hasExamples) {
+        const ex = card.examples.find(e => e.pl);
+        if (ex) {
+            ctx.fillStyle = '#777';
+            ctx.font = `italic ${clampFont(ex.pl, 18, CW-180, ctx, s)}px Inter,system-ui`;
+            ctx.fillText(ex.pl, w/2, h*(wordY+0.20));
+            if (ex.ru) {
+                ctx.fillStyle = '#999';
+                ctx.font = `${clampFont(ex.ru, 15, CW-200, ctx, s)}px Inter,system-ui`;
+                ctx.fillText('(' + ex.ru + ')', w/2, h*(wordY+0.27));
+            }
+        }
+    }
+
+    // sparkles
+    [[0.88,0.15,12],[0.12,0.78,8],[0.92,0.72,10],[0.08,0.18,6],[0.85,0.50,7]].forEach(p => {
+        star4(ctx, p[0]*w, p[1]*h, p[2]*s, '#FFD700', 0.5);
+    });
+
+    // footer
+    ctx.fillStyle = '#4CAF50';
+    ctx.font = `600 ${15*s}px Poppins,system-ui`;
+    ctx.fillText('\uD83D\uDC38 Zabka Learn', w/2, (CH-50)*s);
+    ctx.textAlign = 'start';
+}
+
+function clampFont(text, ideal, maxW, ctx, s) {
+    let sz = ideal * s;
+    ctx.font = `800 ${sz}px Poppins,system-ui`;
+    while (sz > 12*s && ctx.measureText(text).width > maxW*s) {
+        sz -= s;
+        ctx.font = `800 ${sz}px Poppins,system-ui`;
+    }
+    return sz / s * s; // keep scaled
+}
+
+function star4(ctx, x, y, size, color, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, y-size);
+    ctx.quadraticCurveTo(x+size*.15, y-size*.15, x+size, y);
+    ctx.quadraticCurveTo(x+size*.15, y+size*.15, x, y+size);
+    ctx.quadraticCurveTo(x-size*.15, y+size*.15, x-size, y);
+    ctx.quadraticCurveTo(x-size*.15, y-size*.15, x, y-size);
+    ctx.fill();
+    ctx.restore();
+}
+
+function rr(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+    ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r);
+    ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h);
+    ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r);
+    ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+}
+
+// ═══════════════════ DRAG & DROP ═══════════════════
+let dragFrom = null;
+function onDS(e) { dragFrom = parseInt(e.currentTarget.dataset.idx); e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; }
+function onDO(e) { e.preventDefault(); e.dataTransfer.dropEffect='move'; e.currentTarget.classList.add('drag-over'); }
+function onDL(e) { e.currentTarget.classList.remove('drag-over'); }
+function onDD(e) { e.preventDefault(); const to=parseInt(e.currentTarget.dataset.idx); e.currentTarget.classList.remove('drag-over'); if(dragFrom!==null&&dragFrom!==to) moveCard(dragFrom,to); }
+function onDE(e) { e.currentTarget.classList.remove('dragging'); dragFrom=null; }
+
+// ═══════════════════ IMPORT / EXPORT ═══════════════════
+function closeImp() { document.getElementById('impModal').classList.remove('on'); }
+
+function doImport() {
+    const txt = document.getElementById('impText').value.trim();
+    if (!txt) return;
+    let n = 0;
+    txt.split('\n').filter(l => l.trim()).forEach(line => {
+        const parts = line.split('|').map(s => s.trim());
+        if (parts.length < 2) return;
+        const word = parts[0];
+        const translation = parts[1];
+        const examples = [];
+        for (let j = 2; j < parts.length; j += 2) {
+            examples.push({ pl: parts[j] || '', ru: parts[j+1] || '' });
+        }
+        if (!examples.length) examples.push({pl:'', ru:''});
+        addCard(word, translation, examples);
+        n++;
+    });
+    closeImp();
+    document.getElementById('impText').value = '';
+    toast(`Imported ${n} cards`, 'ok');
+}
+
+function doExport() {
+    if (!cards.length) { toast('No cards', 'in'); return; }
+    const data = {
+        template: getTemplate(),
+        channel,
+        cards: cards.map(c => ({
+            word: c.word, translation: c.translation,
+            examples: c.examples, rubric: c.rubric,
+            useTemplate: c.useTemplate, customText: c.customText,
+            scheduleTime: c.scheduleTime,
+        })),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `batch_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Exported', 'ok');
+}
+
+// ═══════════════════ SCHEDULE ═══════════════════
+async function scheduleAll() {
+    const valid = cards.filter(c => c.word && c.translation && c.scheduleTime);
+    if (!valid.length) { toast('Fill in all cards', 'er'); return; }
+
+    const ov = document.getElementById('ov');
+    ov.classList.add('on');
+    const sendImg = document.getElementById('sendImage').value === 'yes';
+
+    try {
+        const payload = [];
+        for (let i = 0; i < valid.length; i++) {
+            document.getElementById('ovTxt').textContent = `${i+1}/${valid.length}...`;
+            const c = valid[i];
+            let img = null;
+            if (sendImg) {
+                const cv = document.getElementById('rcv');
+                drawCard(cv.getContext('2d'), CW, CH, c);
+                img = cv.toDataURL('image/png');
+            }
+            payload.push({
+                word: c.word,
+                translation: c.translation,
+                examples: c.examples.filter(e => e.pl),
+                post_text: getPostText(c),
+                schedule_time: c.scheduleTime,
+                image: img,
+            });
+        }
+
+        document.getElementById('ovTxt').textContent = 'Scheduling...';
+        const res = await fetch('/api/schedule', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ channel, cards: payload }),
+        });
+        const r = await res.json();
+
+        if (r.ok) {
+            const ok = r.results.filter(x => x.ok).length;
+            const fail = r.results.filter(x => !x.ok).length;
+            toast(`Done: ${ok} ok` + (fail ? `, ${fail} failed` : ''), ok ? 'ok' : 'er');
+            if (ok) {
+                cards = [];
+                openIdx = -1;
+                render();
+                save();
+                loadScheduled();
+            }
+        } else {
+            toast(r.error || 'Failed', 'er');
+        }
+    } catch (e) {
+        toast(e.message, 'er');
+    } finally {
+        ov.classList.remove('on');
+    }
+}
+
+// ═══════════════════ SCHEDULED LIST ═══════════════════
+async function loadScheduled() {
+    const box = document.getElementById('schedList');
+    box.innerHTML = '<div style="padding:14px;text-align:center;color:#999">Loading...</div>';
+    try {
+        const res = await fetch(`/api/scheduled?channel=${channel}`);
+        const d = await res.json();
+        if (!d.ok || !d.messages.length) {
+            box.innerHTML = '<div class="empty" style="padding:20px">No scheduled messages</div>';
+            return;
+        }
+        box.innerHTML = '';
+        d.messages.forEach(m => {
+            const dt = new Date(m.date);
+            const ds = dt.toLocaleString('pl-PL', {weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+            const div = document.createElement('div');
+            div.className = 'si';
+            div.innerHTML = `
+                <div class="sd">${ds}</div>
+                <div class="st">${esc(m.text.substring(0,100)) || '(media)'}</div>
+                ${m.has_media ? '<span class="mb">IMG</span>' : ''}
+                <button class="btn btn-sm btn-o del" onclick="delSched(${m.id})">\uD83D\uDDD1</button>
+            `;
+            box.appendChild(div);
+        });
+    } catch (e) {
+        box.innerHTML = `<div class="empty" style="padding:20px;color:var(--red)">Error: ${e.message}</div>`;
+    }
+}
+
+async function delSched(id) {
+    if (!confirm('Delete?')) return;
+    try {
+        await fetch('/api/scheduled', {
+            method:'DELETE',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({channel, ids:[id]}),
+        });
+        toast('Deleted', 'ok');
+        loadScheduled();
+    } catch(e) { toast(e.message, 'er'); }
+}
+
+// ═══════════════════ PERSIST ═══════════════════
+function save() {
+    localStorage.setItem('zb2', JSON.stringify({
+        channel,
+        hour: document.getElementById('defHour').value,
+        startDate: document.getElementById('startDate').value,
+        rubric: document.getElementById('defRubric').value,
+        sendImage: document.getElementById('sendImage').value,
+        template: getTemplate(),
+        cards: cards.map(c => ({
+            word:c.word, translation:c.translation, examples:c.examples,
+            rubric:c.rubric, useTemplate:c.useTemplate, customText:c.customText,
+            scheduleTime:c.scheduleTime,
+        })),
+    }));
+}
+
+function loadState() {
+    try {
+        const raw = localStorage.getItem('zb2');
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        if (d.channel) {
+            channel = d.channel;
+            document.querySelectorAll('#chTog button').forEach(b => b.classList.toggle('on', b.dataset.ch===d.channel));
+        }
+        if (d.hour) document.getElementById('defHour').value = d.hour;
+        if (d.startDate) document.getElementById('startDate').value = d.startDate;
+        if (d.rubric) document.getElementById('defRubric').value = d.rubric;
+        if (d.sendImage) document.getElementById('sendImage').value = d.sendImage;
+        if (d.template) document.getElementById('tplText').value = d.template;
+        if (d.cards && d.cards.length) {
+            d.cards.forEach(c => {
+                cards.push({
+                    word: c.word||'', translation: c.translation||'',
+                    examples: c.examples||[{pl:'',ru:''}],
+                    rubric: c.rubric||'slowo',
+                    useTemplate: c.useTemplate !== false,
+                    customText: c.customText||'',
+                    scheduleTime: c.scheduleTime||'',
+                });
+            });
+            recalcDates();
+            render();
+        }
+    } catch {}
+}
+
+// ═══════════════════ TOAST ═══════════════════
+function toast(msg, type) {
+    const el = document.createElement('div');
+    el.className = `toast ${type||'in'}`;
+    el.textContent = msg;
+    document.getElementById('toasts').appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+}
+</script>
+</body>
+</html>

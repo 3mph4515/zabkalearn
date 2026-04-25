@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Export Mascots</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head><body>
+<h2>Exporting mascots...</h2>
+<div id="log"></div>
+<div id="previews" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;"></div>
+<script>
+const SIZE = 256;
+const colors = {
+    frogGreen: '#4CAF50',
+    lightFrog: '#81C784',
+    white: '#FFFFFF',
+    dark: '#1A1A1A',
+};
+
+const EXPRESSIONS = [
+    'happy','thinking','surprised','wink','love','cool','sad','angry',
+    'sleepy','laugh','nerd','party','zany','shush','monocle','explode',
+    'salute','chef','muscle','fire','star','frog'
+];
+
+function drawMascot(context, x, y, size, expression) {
+    const s = size / 44;
+    context.beginPath();
+    context.arc(x, y, 22 * s, 0, Math.PI * 2);
+    context.fillStyle = colors.frogGreen;
+    context.fill();
+    context.beginPath();
+    context.ellipse(x, y + 2 * s, 13 * s, 10 * s, 0, 0, Math.PI * 2);
+    context.fillStyle = colors.lightFrog;
+    context.fill();
+    context.beginPath();
+    context.arc(x - 6 * s, y - 4 * s, 4 * s, 0, Math.PI * 2);
+    context.arc(x + 6 * s, y - 4 * s, 4 * s, 0, Math.PI * 2);
+    context.fillStyle = colors.white;
+    context.fill();
+    context.fillStyle = colors.dark;
+    context.strokeStyle = colors.dark;
+    context.lineWidth = 1.5 * s;
+    context.lineCap = 'round';
+
+    if (expression === 'thinking') {
+        context.beginPath();
+        context.arc(x - 7 * s, y - 5 * s, 2 * s, 0, Math.PI * 2);
+        context.arc(x + 5 * s, y - 5 * s, 2 * s, 0, Math.PI * 2);
+        context.fill();
+    } else if (expression === 'surprised') {
+        context.beginPath();
+        context.arc(x - 6 * s, y - 4 * s, 2.5 * s, 0, Math.PI * 2);
+        context.arc(x + 6 * s, y - 4 * s, 2.5 * s, 0, Math.PI * 2);
+        context.fill();
+    } else if (expression === 'wink') {
+        context.beginPath();
+        context.arc(x - 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+        context.fill();
+        context.beginPath();
+        context.moveTo(x + 3 * s, y - 3 * s);
+        context.lineTo(x + 9 * s, y - 3 * s);
+        context.stroke();
+    } else if (expression === 'love') {
+        context.fillStyle = '#E53935';
+        [x - 6 * s, x + 6 * s].forEach(hx => {
+            context.beginPath();
+            context.moveTo(hx, y - 2 * s);
+            context.bezierCurveTo(hx - 3 * s, y - 6 * s, hx - 6 * s, y - 2 * s, hx, y + 2 * s);
+            context.bezierCurveTo(hx + 6 * s, y - 2 * s, hx + 3 * s, y - 6 * s, hx, y - 2 * s);
+            context.fill();
+        });
+        context.fillStyle = colors.dark;
+    } else if (expression === 'cool') {
+        context.fillStyle = colors.dark;
+        context.beginPath();
+        context.roundRect(x - 11 * s, y - 6 * s, 9 * s, 6 * s, 1.5 * s);
+        context.roundRect(x + 2 * s, y - 6 * s, 9 * s, 6 * s, 1.5 * s);
+        context.fill();
+        context.beginPath();
+        context.moveTo(x - 2 * s, y - 3 * s);
+        context.lineTo(x + 2 * s, y - 3 * s);
+        context.stroke();
+    } else if (expression === 'sad') {
+        context.beginPath();
+        context.arc(x - 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+        context.arc(x + 7 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = '#64B5F6';
+        context.beginPath();
+        context.ellipse(x + 10 * s, y + 2 * s, 1.5 * s, 2.5 * s, 0, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = colors.dark;
+    } else if (expression === 'angry') {
+        context.beginPath();
+        context.arc(x - 5 * s, y - 2 * s, 2 * s, 0, Math.PI * 2);
+        context.arc(x + 7 * s, y - 2 * s, 2 * s, 0, Math.PI * 2);
+        context.fill();
+        context.lineWidth = 2 * s;
+        context.beginPath();
+        context.moveTo(x - 9 * s, y - 7 * s); context.lineTo(x - 2 * s, y - 5 * s);
+        context.moveTo(x + 11 * s, y - 7 * s); context.lineTo(x + 4 * s, y - 5 * s);
+        context.stroke();
+        context.lineWidth = 1.5 * s;
+    } else if (expression === 'sleepy') {
+        context.beginPath();
+        context.moveTo(x - 8 * s, y - 3 * s); context.lineTo(x - 2 * s, y - 3 * s);
+        context.moveTo(x + 4 * s, y - 3 * s); context.lineTo(x + 10 * s, y - 3 * s);
+        context.stroke();
+        context.font = `bold ${6 * s}px sans-serif`;
+        context.fillText('z', x + 14 * s, y - 8 * s);
+        context.font = `bold ${4 * s}px sans-serif`;
+        context.fillText('z', x + 17 * s, y - 12 * s);
+    } else if (expression === 'laugh') {
+        context.beginPath();
+        context.arc(x - 5 * s, y - 3 * s, 3 * s, Math.PI, 0);
+        context.arc(x + 7 * s, y - 3 * s, 3 * s, Math.PI, 0);
+        context.stroke();
+    } else if (expression === 'nerd') {
+        context.strokeStyle = colors.dark; context.lineWidth = 1.5 * s;
+        context.beginPath();
+        context.arc(x - 6 * s, y - 3 * s, 5 * s, 0, Math.PI * 2);
+        context.arc(x + 6 * s, y - 3 * s, 5 * s, 0, Math.PI * 2);
+        context.stroke();
+        context.beginPath(); context.moveTo(x - 1 * s, y - 3 * s); context.lineTo(x + 1 * s, y - 3 * s); context.stroke();
+        context.fillStyle = colors.dark; context.beginPath();
+        context.arc(x - 6 * s, y - 3 * s, 1.5 * s, 0, Math.PI * 2);
+        context.arc(x + 6 * s, y - 3 * s, 1.5 * s, 0, Math.PI * 2);
+        context.fill();
+    } else if (expression === 'party') {
+        context.beginPath();
+        context.arc(x - 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+        context.arc(x + 7 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = '#FFD700'; context.beginPath();
+        context.moveTo(x, y - 22 * s); context.lineTo(x - 8 * s, y - 10 * s); context.lineTo(x + 8 * s, y - 10 * s);
+        context.closePath(); context.fill();
+        context.fillStyle = '#E53935'; context.beginPath();
+        context.arc(x, y - 22 * s, 2 * s, 0, Math.PI * 2); context.fill();
+        context.fillStyle = colors.dark;
+    } else if (expression === 'zany') {
+        context.beginPath();
+        context.arc(x - 6 * s, y - 4 * s, 3 * s, 0, Math.PI * 2); context.fill();
+        context.beginPath();
+        context.arc(x + 6 * s, y - 2 * s, 1.5 * s, 0, Math.PI * 2); context.fill();
+    } else if (expression === 'shush') {
+        context.beginPath();
+        context.arc(x - 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+        context.arc(x + 7 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+        context.fill();
+    } else if (expression === 'monocle') {
+        context.beginPath(); context.arc(x - 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2); context.fill();
+        context.strokeStyle = '#795548'; context.lineWidth = 1.5 * s;
+        context.beginPath(); context.arc(x + 6 * s, y - 3 * s, 5 * s, 0, Math.PI * 2); context.stroke();
+        context.fillStyle = colors.dark; context.beginPath();
+        context.arc(x + 6 * s, y - 3 * s, 1.5 * s, 0, Math.PI * 2); context.fill();
+        context.strokeStyle = '#795548'; context.lineWidth = 0.8 * s;
+        context.beginPath(); context.moveTo(x + 11 * s, y - 1 * s); context.lineTo(x + 14 * s, y + 10 * s); context.stroke();
+        context.strokeStyle = colors.dark; context.lineWidth = 1.5 * s;
+    } else if (expression === 'explode') {
+        context.beginPath();
+        context.arc(x - 6 * s, y - 4 * s, 3 * s, 0, Math.PI * 2);
+        context.arc(x + 6 * s, y - 4 * s, 3 * s, 0, Math.PI * 2); context.fill();
+        context.strokeStyle = '#FF9800'; context.lineWidth = 1.5 * s;
+        for (let i = 0; i < 5; i++) {
+            const angle = (-0.8 + i * 0.4);
+            context.beginPath();
+            context.moveTo(x + Math.cos(angle) * 14 * s, y - 14 * s + Math.sin(angle) * 3 * s);
+            context.lineTo(x + Math.cos(angle) * 20 * s, y - 18 * s + Math.sin(angle) * 5 * s);
+            context.stroke();
+        }
+        context.strokeStyle = colors.dark;
+    } else if (expression === 'salute') {
+        context.beginPath(); context.arc(x - 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2); context.fill();
+        context.beginPath(); context.moveTo(x + 3 * s, y - 3 * s); context.lineTo(x + 9 * s, y - 3 * s); context.stroke();
+        context.fillStyle = colors.lightFrog; context.beginPath();
+        context.roundRect(x + 10 * s, y - 14 * s, 8 * s, 5 * s, 2 * s); context.fill();
+        context.fillStyle = colors.dark;
+    } else if (expression === 'chef') {
+        context.beginPath();
+        context.arc(x - 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+        context.arc(x + 7 * s, y - 3 * s, 2 * s, 0, Math.PI * 2); context.fill();
+        context.fillStyle = '#fff'; context.beginPath();
+        context.ellipse(x, y - 20 * s, 12 * s, 8 * s, 0, 0, Math.PI * 2); context.fill();
+        context.fillRect(x - 10 * s, y - 15 * s, 20 * s, 5 * s);
+        context.fillStyle = colors.dark;
+    } else if (expression === 'muscle') {
+        context.beginPath();
+        context.arc(x - 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+        context.arc(x + 7 * s, y - 3 * s, 2 * s, 0, Math.PI * 2); context.fill();
+        context.lineWidth = 2.5 * s; context.beginPath();
+        context.moveTo(x - 9 * s, y - 6 * s); context.lineTo(x - 2 * s, y - 7 * s);
+        context.moveTo(x + 3 * s, y - 7 * s); context.lineTo(x + 10 * s, y - 6 * s);
+        context.stroke(); context.lineWidth = 1.5 * s;
+    } else if (expression === 'fire') {
+        context.fillStyle = '#FF5722'; context.beginPath();
+        context.arc(x - 5 * s, y - 3 * s, 2.5 * s, 0, Math.PI * 2);
+        context.arc(x + 7 * s, y - 3 * s, 2.5 * s, 0, Math.PI * 2); context.fill();
+        context.fillStyle = colors.dark;
+    } else if (expression === 'star') {
+        context.fillStyle = '#FFD700';
+        [x - 5 * s, x + 7 * s].forEach(sx => {
+            const ss = 3 * s;
+            context.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const a = (i * 4 * Math.PI / 5) - Math.PI / 2;
+                const r = i % 2 === 0 ? ss : ss * 0.4;
+                if (i === 0) context.moveTo(sx + r * Math.cos(a), y - 3 * s + r * Math.sin(a));
+                else context.lineTo(sx + r * Math.cos(a), y - 3 * s + r * Math.sin(a));
+            }
+            context.closePath(); context.fill();
+        });
+        context.fillStyle = colors.dark;
+    } else if (expression === 'frog') {
+        context.fillStyle = colors.frogGreen; context.beginPath();
+        context.arc(x - 8 * s, y - 12 * s, 6 * s, 0, Math.PI * 2);
+        context.arc(x + 8 * s, y - 12 * s, 6 * s, 0, Math.PI * 2); context.fill();
+        context.fillStyle = '#fff'; context.beginPath();
+        context.arc(x - 8 * s, y - 12 * s, 4 * s, 0, Math.PI * 2);
+        context.arc(x + 8 * s, y - 12 * s, 4 * s, 0, Math.PI * 2); context.fill();
+        context.fillStyle = colors.dark; context.beginPath();
+        context.arc(x - 8 * s, y - 12 * s, 2 * s, 0, Math.PI * 2);
+        context.arc(x + 8 * s, y - 12 * s, 2 * s, 0, Math.PI * 2); context.fill();
+    } else {
+        context.beginPath();
+        context.arc(x - 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+        context.arc(x + 7 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+        context.fill();
+    }
+
+    // Blush
+    if (!['cool', 'angry', 'fire', 'explode'].includes(expression)) {
+        context.beginPath();
+        context.ellipse(x - 12 * s, y + 4 * s, 3 * s, 2 * s, 0, 0, Math.PI * 2);
+        context.ellipse(x + 12 * s, y + 4 * s, 3 * s, 2 * s, 0, 0, Math.PI * 2);
+        context.fillStyle = 'rgba(229, 57, 53, 0.35)';
+        context.fill();
+    }
+
+    context.strokeStyle = colors.dark;
+    context.lineWidth = 1.5 * s;
+    context.lineCap = 'round';
+
+    // Mouth
+    if (expression === 'surprised') {
+        context.beginPath(); context.ellipse(x, y + 8 * s, 3 * s, 4 * s, 0, 0, Math.PI * 2); context.stroke();
+    } else if (expression === 'thinking') {
+        context.beginPath();
+        context.moveTo(x - 5 * s, y + 7 * s);
+        context.quadraticCurveTo(x - 2 * s, y + 5 * s, x, y + 7 * s);
+        context.quadraticCurveTo(x + 2 * s, y + 9 * s, x + 5 * s, y + 7 * s);
+        context.stroke();
+    } else if (expression === 'sad') {
+        context.beginPath();
+        context.moveTo(x - 5 * s, y + 9 * s); context.quadraticCurveTo(x, y + 5 * s, x + 5 * s, y + 9 * s); context.stroke();
+    } else if (expression === 'angry') {
+        context.beginPath(); context.moveTo(x - 4 * s, y + 8 * s); context.lineTo(x + 4 * s, y + 8 * s); context.stroke();
+    } else if (expression === 'sleepy') {
+        context.beginPath(); context.ellipse(x, y + 8 * s, 3 * s, 2 * s, 0, 0, Math.PI * 2); context.stroke();
+    } else if (expression === 'laugh') {
+        context.beginPath();
+        context.moveTo(x - 7 * s, y + 5 * s); context.quadraticCurveTo(x, y + 14 * s, x + 7 * s, y + 5 * s); context.stroke();
+        context.beginPath(); context.moveTo(x - 6 * s, y + 6 * s); context.lineTo(x + 6 * s, y + 6 * s); context.stroke();
+    } else if (expression === 'cool' || expression === 'monocle') {
+        context.beginPath();
+        context.moveTo(x - 3 * s, y + 7 * s); context.quadraticCurveTo(x + 2 * s, y + 10 * s, x + 6 * s, y + 6 * s); context.stroke();
+    } else if (expression === 'zany') {
+        context.beginPath();
+        context.moveTo(x - 4 * s, y + 6 * s); context.quadraticCurveTo(x, y + 10 * s, x + 4 * s, y + 6 * s); context.stroke();
+        context.fillStyle = '#E91E63'; context.beginPath();
+        context.ellipse(x + 2 * s, y + 11 * s, 3 * s, 4 * s, 0.2, 0, Math.PI * 2); context.fill();
+        context.fillStyle = colors.dark;
+    } else if (expression === 'shush') {
+        context.beginPath(); context.ellipse(x, y + 7 * s, 2 * s, 1.5 * s, 0, 0, Math.PI * 2); context.stroke();
+        context.fillStyle = colors.lightFrog; context.beginPath();
+        context.roundRect(x - 1.5 * s, y + 2 * s, 3 * s, 10 * s, 1.5 * s); context.fill();
+        context.fillStyle = colors.dark;
+    } else if (expression === 'explode') {
+        context.beginPath(); context.ellipse(x, y + 8 * s, 4 * s, 5 * s, 0, 0, Math.PI * 2); context.stroke();
+    } else if (expression === 'party' || expression === 'star') {
+        context.beginPath();
+        context.moveTo(x - 7 * s, y + 5 * s); context.quadraticCurveTo(x, y + 14 * s, x + 7 * s, y + 5 * s); context.stroke();
+    } else if (expression === 'muscle' || expression === 'fire' || expression === 'salute') {
+        context.beginPath();
+        context.moveTo(x - 5 * s, y + 6 * s); context.lineTo(x + 5 * s, y + 6 * s);
+        context.quadraticCurveTo(x + 3 * s, y + 9 * s, x, y + 9 * s);
+        context.quadraticCurveTo(x - 3 * s, y + 9 * s, x - 5 * s, y + 6 * s); context.stroke();
+    } else {
+        context.beginPath();
+        context.moveTo(x - 6 * s, y + 6 * s); context.quadraticCurveTo(x, y + 11 * s, x + 6 * s, y + 6 * s); context.stroke();
+    }
+}
+
+async function exportAll() {
+    const zip = new JSZip();
+    const log = document.getElementById('log');
+    const previews = document.getElementById('previews');
+
+    for (const expr of EXPRESSIONS) {
+        const canvas = document.createElement('canvas');
+        canvas.width = SIZE;
+        canvas.height = SIZE;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, SIZE, SIZE);
+        drawMascot(ctx, SIZE / 2, SIZE / 2, SIZE * 0.85, expr);
+
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+        zip.file(`mascot_${expr}.png`, blob);
+
+        const img = document.createElement('img');
+        img.src = canvas.toDataURL();
+        img.style.cssText = 'width:64px;height:64px;border:1px solid #eee;border-radius:8px;';
+        img.title = expr;
+        previews.appendChild(img);
+
+        log.textContent = `Rendered: ${expr}`;
+    }
+
+    log.textContent = 'Creating ZIP...';
+    const content = await zip.generateAsync({type: 'blob'});
+    const url = URL.createObjectURL(content);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'zabka_mascots_256.zip';
+    a.click();
+    URL.revokeObjectURL(url);
+    log.textContent = 'Done! ZIP downloaded.';
+}
+
+exportAll();
+</script>
+</body></html>

@@ -1,0 +1,2025 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polski Daily | Card Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --frog-green: #4CAF50;
+            --light-frog: #81C784;
+            --soft-green: #E8F5E9;
+            --polish-red: #E53935;
+            --dark: #1A1A1A;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--soft-green) 0%, #C8E6C9 100%);
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        h1 {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #2E7D32;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.4rem;
+            margin-bottom: 8px;
+        }
+
+        .version {
+            font-size: 0.7rem;
+            background: var(--frog-green);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .controls-panel {
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+
+
+        .preview-panel {
+            position: sticky;
+            top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #preview-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #card-preview {
+            max-width: 100%;
+            max-height: calc(100vh - 160px);
+            object-fit: contain;
+        }
+
+        .panel h2 {
+            color: var(--dark);
+            font-size: 1rem;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--soft-green);
+        }
+
+        .form-group {
+            margin-bottom: 8px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+            font-size: 0.8rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--frog-green);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 40px;
+        }
+
+        .template-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            margin-bottom: 12px;
+        }
+
+        .template-btn {
+            padding: 6px 4px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            font-size: 0.7rem;
+        }
+
+        .template-btn:hover {
+            border-color: var(--light-frog);
+            background: var(--soft-green);
+        }
+
+        .template-btn.active {
+            border-color: var(--frog-green);
+            background: var(--soft-green);
+        }
+
+        .template-btn .icon {
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .template-btn .name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .export-btn {
+            width: 100%;
+            padding: 10px;
+            background: var(--frog-green);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+
+        .export-btn:hover {
+            background: #43A047;
+        }
+
+        .preview-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-panel h2 {
+            align-self: flex-start;
+            width: 100%;
+        }
+
+        #preview-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex: 1;
+            width: 100%;
+        }
+
+        #card-preview {
+            max-width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 5px 30px rgba(0,0,0,0.15);
+        }
+
+        .color-picker-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .color-picker-row input[type="color"] {
+            width: 40px;
+            height: 34px;
+            padding: 2px;
+            cursor: pointer;
+        }
+
+        .color-picker-row input[type="text"] {
+            flex: 1;
+        }
+
+        .hint {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .color-presets {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .color-preset {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .color-preset:hover {
+            transform: scale(1.15);
+            border-color: var(--frog-green);
+        }
+
+        .mascot-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .mascot-btn {
+            width: 32px;
+            height: 32px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mascot-btn:hover {
+            border-color: var(--light-frog);
+            background: var(--soft-green);
+        }
+
+        .mascot-btn.active {
+            border-color: var(--frog-green);
+            background: var(--soft-green);
+        }
+
+        .decor-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .decor-option {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 8px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: background 0.2s;
+        }
+
+        .decor-option:hover {
+            background: var(--soft-green);
+        }
+
+        .decor-option input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .format-selector {
+            display: flex;
+            gap: 4px;
+        }
+
+        .format-btn {
+            flex: 1;
+            padding: 6px 4px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            background: white;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .format-btn:hover {
+            border-color: var(--light-frog);
+            background: var(--soft-green);
+        }
+
+        .format-btn.active {
+            border-color: var(--frog-green);
+            background: var(--soft-green);
+        }
+
+        .image-upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .image-upload-area:hover {
+            border-color: var(--frog-green);
+            background: var(--soft-green);
+        }
+
+        .image-upload-area.dragover {
+            border-color: var(--frog-green);
+            background: var(--soft-green);
+        }
+
+        .upload-placeholder {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+            color: #888;
+            font-size: 0.75rem;
+        }
+
+        .upload-icon {
+            font-size: 1.2rem;
+        }
+
+        .upload-preview {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-preview img {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .remove-image {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 50%;
+            background: var(--polish-red);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-options {
+            margin-top: 8px;
+            padding: 8px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .option-row {
+            margin-bottom: 8px;
+        }
+
+        .option-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .option-row label {
+            display: block;
+            font-size: 0.75rem;
+            color: #555;
+            margin-bottom: 4px;
+        }
+
+        .option-row input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .option-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--frog-green);
+            cursor: pointer;
+        }
+
+        .overlay-colors {
+            display: flex;
+            gap: 8px;
+        }
+
+        .overlay-color-btn {
+            width: 28px;
+            height: 28px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .overlay-color-btn:hover {
+            border-color: var(--frog-green);
+        }
+
+        .overlay-color-btn.active {
+            border-color: var(--frog-green);
+            box-shadow: 0 0 0 2px var(--soft-green);
+        }
+
+        .fit-selector {
+            display: flex;
+            gap: 4px;
+        }
+
+        .fit-btn {
+            flex: 1;
+            padding: 5px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            background: white;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .fit-btn:hover {
+            border-color: var(--light-frog);
+        }
+
+        .fit-btn.active {
+            border-color: var(--frog-green);
+            background: var(--soft-green);
+        }
+
+        .options-section {
+            margin-top: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .options-section summary {
+            padding: 8px 10px;
+            background: #f9f9f9;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #555;
+        }
+
+        .options-section summary:hover {
+            background: var(--soft-green);
+        }
+
+        .options-section[open] summary {
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .options-content {
+            padding: 10px;
+        }
+
+        .options-content .form-group {
+            margin-bottom: 10px;
+        }
+
+        .options-content .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .spacing-row {
+            margin-bottom: 8px;
+        }
+
+        .spacing-row label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #555;
+            margin-bottom: 2px;
+        }
+
+        .spacing-row label span {
+            font-weight: 600;
+            color: var(--frog-green);
+        }
+
+        .spacing-row input[type="range"] {
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .spacing-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--frog-green);
+            cursor: pointer;
+        }
+
+        .reset-spacing-btn {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #f5f5f5;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .reset-spacing-btn:hover {
+            background: #eee;
+            border-color: #ccc;
+        }
+
+        @media (max-width: 1000px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .controls-panel {
+                max-height: none;
+                overflow: visible;
+            }
+            .preview-panel {
+                order: -1;
+                position: static;
+            }
+            #card-preview {
+                max-height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Polski Daily | Card Generator <span class="version">v1.6</span></h1>
+
+        <div class="panel controls-panel settings-panel">
+            <h2>Настройки карточки</h2>
+
+            <div class="template-selector">
+                <button class="template-btn active" data-template="ciekawostka" data-badge="CIEKAWOSTKA DNIA">
+                    <span class="icon">🧠</span>
+                    <span class="name">Ciekawostka</span>
+                </button>
+                <button class="template-btn" data-template="slowo" data-badge="SŁOWO DNIA">
+                    <span class="icon">📖</span>
+                    <span class="name">Słowo dnia</span>
+                </button>
+                <button class="template-btn" data-template="quiz" data-badge="QUIZ TIME">
+                    <span class="icon">❓</span>
+                    <span class="name">Quiz</span>
+                </button>
+                <button class="template-btn" data-template="blad" data-badge="BŁĄD DNIA">
+                    <span class="icon">⚠️</span>
+                    <span class="name">Błąd dnia</span>
+                </button>
+                <button class="template-btn" data-template="podsluchano" data-badge="PODSLUCHANO W ŻABCE">
+                    <span class="icon">👂</span>
+                    <span class="name">Podsluchano</span>
+                </button>
+                <button class="template-btn" data-template="gramatyka" data-badge="GRAMATYKA">
+                    <span class="icon">📝</span>
+                    <span class="name">Gramatyka</span>
+                </button>
+                <button class="template-btn" data-template="custom" data-badge="">
+                    <span class="icon">✏️</span>
+                    <span class="name">Своя</span>
+                </button>
+            </div>
+
+            <div class="form-group">
+                <label>Заголовок шапки</label>
+                <input type="text" id="header-title" value="Польский язык на каждый день">
+            </div>
+
+            <div class="form-group">
+                <label>Юзернейм (футер)</label>
+                <input type="text" id="footer-username" value="@Polski_Daily">
+            </div>
+
+            <div class="form-group">
+                <label>Рубрика (badge)</label>
+                <input type="text" id="badge-text" value="CIEKAWOSTKA DNIA">
+            </div>
+
+            <div class="form-group">
+                <label>Главное слово/фраза</label>
+                <textarea id="main-word" rows="1">Zmierzchnica trupia główka</textarea>
+            </div>
+
+            <div class="form-group" id="transcription-group" style="display: none;">
+                <label>Транскрипция</label>
+                <textarea id="transcription" rows="1" placeholder="[пшепрашам]"></textarea>
+            </div>
+
+            <div class="form-group" id="translation-group" style="display: none;">
+                <label>Перевод</label>
+                <textarea id="translation" rows="1" placeholder="Извините"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Подзаголовок/вопрос</label>
+                <textarea id="subtitle" rows="1">Jak myślicie, co to jest?</textarea>
+            </div>
+
+            <div class="form-group" id="example-group" style="display: none;">
+                <label>Пример использования</label>
+                <textarea id="example" placeholder="Przepraszam, gdzie jest Żabka?"></textarea>
+            </div>
+
+            <div class="form-group" id="quiz-options-group" style="display: none;">
+                <label>Варианты ответа</label>
+                <textarea id="quiz-options" placeholder="Склеп&#10;Магазин&#10;Подвал"></textarea>
+            </div>
+
+            <details class="options-section">
+                <summary>🎨 Оформление</summary>
+                <div class="options-content">
+                    <div class="form-group">
+                        <label>Цвет бейджа</label>
+                        <div class="color-picker-row">
+                            <input type="color" id="badge-color" value="#E53935">
+                            <input type="text" id="badge-color-text" value="#E53935">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Цвет фона</label>
+                    <div class="color-picker-row">
+                        <input type="color" id="bg-color" value="#E8F5E9">
+                        <input type="text" id="bg-color-text" value="#E8F5E9">
+                    </div>
+                    <div class="color-presets">
+                        <button type="button" class="color-preset" data-color="#E8F5E9" style="background:#E8F5E9"></button>
+                        <button type="button" class="color-preset" data-color="#FFF3E0" style="background:#FFF3E0"></button>
+                        <button type="button" class="color-preset" data-color="#E3F2FD" style="background:#E3F2FD"></button>
+                        <button type="button" class="color-preset" data-color="#FCE4EC" style="background:#FCE4EC"></button>
+                        <button type="button" class="color-preset" data-color="#F3E5F5" style="background:#F3E5F5"></button>
+                        <button type="button" class="color-preset" data-color="#FFFDE7" style="background:#FFFDE7"></button>
+                    </div>
+                    <label class="decor-option" style="margin-top: 6px;"><input type="checkbox" id="no-bg"> Прозрачный</label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Фон-картинка</label>
+                        <div class="image-upload-area" id="image-upload-area">
+                            <input type="file" id="bg-image" accept="image/*" style="display: none;">
+                            <div class="upload-placeholder" id="upload-placeholder">
+                                <span class="upload-icon">🖼️</span>
+                                <span>Загрузить</span>
+                            </div>
+                            <div class="upload-preview" id="upload-preview" style="display: none;">
+                                <img id="preview-thumb" src="">
+                                <button type="button" class="remove-image" id="remove-image">✕</button>
+                            </div>
+                        </div>
+                        <div class="image-options" id="image-options" style="display: none;">
+                            <div class="option-row">
+                                <label>Затемнение: <span id="overlay-value">40%</span></label>
+                                <input type="range" id="overlay-opacity" min="0" max="80" value="40">
+                            </div>
+                            <div class="option-row">
+                                <label>Тень текста: <span id="text-shadow-value">70%</span></label>
+                                <input type="range" id="text-shadow-intensity" min="0" max="100" value="70">
+                            </div>
+                            <div class="option-row">
+                                <div class="overlay-colors">
+                                    <button type="button" class="overlay-color-btn active" data-overlay="black" style="background: #000;">⬛</button>
+                                    <button type="button" class="overlay-color-btn" data-overlay="green" style="background: #2E7D32;">🟩</button>
+                                    <button type="button" class="overlay-color-btn" data-overlay="white" style="background: #fff; color: #333;">⬜</button>
+                                </div>
+                                <div class="fit-selector">
+                                    <button type="button" class="fit-btn active" data-fit="cover">Fill</button>
+                                    <button type="button" class="fit-btn" data-fit="contain">Fit</button>
+                                </div>
+                            </div>
+                            <div class="option-row">
+                                <label class="decor-option"><input type="checkbox" id="text-outline" checked> Обводка текста</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Маскот</label>
+                        <div class="mascot-selector">
+                            <button type="button" class="mascot-btn active" data-mascot="happy">😊</button>
+                            <button type="button" class="mascot-btn" data-mascot="thinking">🤔</button>
+                            <button type="button" class="mascot-btn" data-mascot="surprised">😮</button>
+                            <button type="button" class="mascot-btn" data-mascot="wink">😉</button>
+                            <button type="button" class="mascot-btn" data-mascot="love">😍</button>
+                            <button type="button" class="mascot-btn" data-mascot="cool">😎</button>
+                            <button type="button" class="mascot-btn" data-mascot="sad">😢</button>
+                            <button type="button" class="mascot-btn" data-mascot="angry">😠</button>
+                            <button type="button" class="mascot-btn" data-mascot="sleepy">😴</button>
+                            <button type="button" class="mascot-btn" data-mascot="laugh">😂</button>
+                            <button type="button" class="mascot-btn" data-mascot="nerd">🤓</button>
+                            <button type="button" class="mascot-btn" data-mascot="none">❌</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Декор</label>
+                        <div class="decor-selector">
+                            <label class="decor-option"><input type="checkbox" id="decor-flag"> 🇵🇱</label>
+                            <label class="decor-option"><input type="checkbox" id="decor-stars"> ✨</label>
+                            <label class="decor-option"><input type="checkbox" id="decor-fire"> 🔥</label>
+                            <label class="decor-option"><input type="checkbox" id="decor-hearts"> 💖</label>
+                            <label class="decor-option"><input type="checkbox" id="decor-confetti"> 🎉</label>
+                            <label class="decor-option"><input type="checkbox" id="decor-lightning"> ⚡</label>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <details class="options-section">
+                <summary>⚙️ Отступы</summary>
+                <div class="options-content">
+                    <div class="spacing-row">
+                        <label>Карточка <span id="card-padding-val">24</span></label>
+                        <input type="range" id="card-padding" min="8" max="48" value="24">
+                    </div>
+                    <div class="spacing-row">
+                        <label>Сверху (до контента) <span id="top-gap-val">0</span></label>
+                        <input type="range" id="top-gap" min="0" max="120" value="0">
+                    </div>
+                    <div class="spacing-row">
+                        <label>После бейджа <span id="badge-gap-val">24</span></label>
+                        <input type="range" id="badge-gap" min="0" max="64" value="24">
+                    </div>
+                    <div class="spacing-row">
+                        <label>После заголовка <span id="title-gap-val">16</span></label>
+                        <input type="range" id="title-gap" min="0" max="48" value="16">
+                    </div>
+                    <div class="spacing-row">
+                        <label>Межстрочный <span id="line-gap-val">8</span></label>
+                        <input type="range" id="line-gap" min="0" max="32" value="8">
+                    </div>
+                    <div class="spacing-row">
+                        <label>Размер текста <span id="title-size-val">100</span>%</label>
+                        <input type="range" id="title-size" min="60" max="140" value="100">
+                    </div>
+                    <button type="button" class="reset-spacing-btn" onclick="resetSpacing()">Сбросить</button>
+                </div>
+            </details>
+
+            <div class="form-group">
+                <label>Формат</label>
+                <div class="format-selector">
+                    <button type="button" class="format-btn" data-format="horizontal">↔️</button>
+                    <button type="button" class="format-btn active" data-format="square">⬜</button>
+                    <button type="button" class="format-btn" data-format="vertical">↕️</button>
+                </div>
+            </div>
+
+            <button class="export-btn" onclick="exportCard()">
+                📥 Скачать PNG
+            </button>
+        </div>
+
+        <div class="panel preview-panel">
+            <h2>Предпросмотр</h2>
+            <div id="preview-container">
+                <canvas id="card-preview" width="540" height="540"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('card-preview');
+        let ctx = canvas.getContext('2d');
+
+        const dpr = window.devicePixelRatio || 1;
+        const baseWidth = 540;
+
+        let currentFormat = 'square';
+        let currentTemplate = 'ciekawostka';
+        let currentMascot = 'happy';
+        let bgImage = null;
+        let overlayColor = 'black';
+        let imageFit = 'cover';
+
+        // Telegram icons (just the plane shape, no circle)
+        const tgLogoImg = new Image();
+        tgLogoImg.src = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#2AABEE" d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161l-1.97 9.293c-.146.658-.537.818-1.084.508l-3-2.211-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.582-4.461c.537-.194 1.006.131.821.93z"/></svg>');
+        tgLogoImg.onload = () => drawCard();
+
+        const tgLogoWhiteImg = new Image();
+        tgLogoWhiteImg.src = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#fff" d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161l-1.97 9.293c-.146.658-.537.818-1.084.508l-3-2.211-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.582-4.461c.537-.194 1.006.131.821.93z"/></svg>');
+
+        const colors = {
+            frogGreen: '#4CAF50',
+            lightFrog: '#81C784',
+            softGreen: '#E8F5E9',
+            polishRed: '#E53935',
+            dark: '#1A1A1A',
+            white: '#FFFFFF'
+        };
+
+        // Format sizes - increased horizontal height
+        function getCanvasSize(forExport = false) {
+            const formats = {
+                horizontal: { w: 2160, h: 1620 },   // 4:3 (2x)
+                square: { w: 2160, h: 2160 },       // 1:1 (2x)
+                vertical: { w: 2160, h: 2700 }      // 4:5 (2x)
+            };
+            const size = formats[currentFormat] || formats.square;
+
+            if (forExport) return size;
+            const scale = baseWidth / 2160;
+            return { w: size.w * scale, h: size.h * scale };
+        }
+
+        function setupCanvas() {
+            const size = getCanvasSize();
+            canvas.width = size.w * dpr;
+            canvas.height = size.h * dpr;
+            canvas.style.width = size.w + 'px';
+            canvas.style.height = size.h + 'px';
+            ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+        }
+
+        setupCanvas();
+
+        // Draw mascot
+        function drawMascot(context, x, y, size, expression = 'happy') {
+            const s = size / 44;
+
+            context.beginPath();
+            context.arc(x, y, 22 * s, 0, Math.PI * 2);
+            context.fillStyle = colors.frogGreen;
+            context.fill();
+
+            context.beginPath();
+            context.ellipse(x, y + 2 * s, 13 * s, 10 * s, 0, 0, Math.PI * 2);
+            context.fillStyle = colors.lightFrog;
+            context.fill();
+
+            context.beginPath();
+            context.arc(x - 6 * s, y - 4 * s, 4 * s, 0, Math.PI * 2);
+            context.arc(x + 6 * s, y - 4 * s, 4 * s, 0, Math.PI * 2);
+            context.fillStyle = colors.white;
+            context.fill();
+
+            context.fillStyle = colors.dark;
+            context.strokeStyle = colors.dark;
+            context.lineWidth = 1.5 * s;
+            context.lineCap = 'round';
+
+            // Eyes based on expression
+            if (expression === 'thinking') {
+                context.beginPath();
+                context.arc(x - 7 * s, y - 5 * s, 2 * s, 0, Math.PI * 2);
+                context.arc(x + 5 * s, y - 5 * s, 2 * s, 0, Math.PI * 2);
+                context.fill();
+            } else if (expression === 'surprised') {
+                context.beginPath();
+                context.arc(x - 6 * s, y - 4 * s, 2.5 * s, 0, Math.PI * 2);
+                context.arc(x + 6 * s, y - 4 * s, 2.5 * s, 0, Math.PI * 2);
+                context.fill();
+            } else if (expression === 'wink') {
+                context.beginPath();
+                context.arc(x - 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+                context.fill();
+                context.beginPath();
+                context.moveTo(x + 3 * s, y - 3 * s);
+                context.lineTo(x + 9 * s, y - 3 * s);
+                context.stroke();
+            } else if (expression === 'love') {
+                // Heart eyes
+                context.fillStyle = '#E53935';
+                [x - 6 * s, x + 6 * s].forEach(hx => {
+                    context.beginPath();
+                    context.moveTo(hx, y - 2 * s);
+                    context.bezierCurveTo(hx - 3 * s, y - 6 * s, hx - 6 * s, y - 2 * s, hx, y + 2 * s);
+                    context.bezierCurveTo(hx + 6 * s, y - 2 * s, hx + 3 * s, y - 6 * s, hx, y - 2 * s);
+                    context.fill();
+                });
+                context.fillStyle = colors.dark;
+            } else if (expression === 'cool') {
+                // Sunglasses
+                context.fillStyle = colors.dark;
+                context.beginPath();
+                context.roundRect(x - 11 * s, y - 6 * s, 9 * s, 6 * s, 1.5 * s);
+                context.roundRect(x + 2 * s, y - 6 * s, 9 * s, 6 * s, 1.5 * s);
+                context.fill();
+                context.beginPath();
+                context.moveTo(x - 2 * s, y - 3 * s);
+                context.lineTo(x + 2 * s, y - 3 * s);
+                context.lineWidth = 1.5 * s;
+                context.stroke();
+            } else if (expression === 'sad') {
+                context.beginPath();
+                context.arc(x - 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+                context.arc(x + 7 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+                context.fill();
+                // Tear
+                context.fillStyle = '#64B5F6';
+                context.beginPath();
+                context.ellipse(x + 10 * s, y + 2 * s, 1.5 * s, 2.5 * s, 0, 0, Math.PI * 2);
+                context.fill();
+                context.fillStyle = colors.dark;
+            } else if (expression === 'angry') {
+                context.beginPath();
+                context.arc(x - 5 * s, y - 2 * s, 2 * s, 0, Math.PI * 2);
+                context.arc(x + 7 * s, y - 2 * s, 2 * s, 0, Math.PI * 2);
+                context.fill();
+                // Angry eyebrows
+                context.lineWidth = 2 * s;
+                context.beginPath();
+                context.moveTo(x - 9 * s, y - 7 * s);
+                context.lineTo(x - 2 * s, y - 5 * s);
+                context.moveTo(x + 11 * s, y - 7 * s);
+                context.lineTo(x + 4 * s, y - 5 * s);
+                context.stroke();
+                context.lineWidth = 1.5 * s;
+            } else if (expression === 'sleepy') {
+                // Closed eyes (lines)
+                context.beginPath();
+                context.moveTo(x - 8 * s, y - 3 * s);
+                context.lineTo(x - 2 * s, y - 3 * s);
+                context.moveTo(x + 4 * s, y - 3 * s);
+                context.lineTo(x + 10 * s, y - 3 * s);
+                context.stroke();
+                // Zzz
+                context.font = `bold ${6 * s}px sans-serif`;
+                context.fillText('z', x + 14 * s, y - 8 * s);
+                context.font = `bold ${4 * s}px sans-serif`;
+                context.fillText('z', x + 17 * s, y - 12 * s);
+            } else if (expression === 'laugh') {
+                // Closed happy eyes (arcs)
+                context.beginPath();
+                context.arc(x - 5 * s, y - 3 * s, 3 * s, Math.PI, 0);
+                context.arc(x + 7 * s, y - 3 * s, 3 * s, Math.PI, 0);
+                context.stroke();
+            } else if (expression === 'nerd') {
+                // Glasses
+                context.strokeStyle = colors.dark;
+                context.lineWidth = 1.5 * s;
+                context.beginPath();
+                context.arc(x - 6 * s, y - 3 * s, 5 * s, 0, Math.PI * 2);
+                context.arc(x + 6 * s, y - 3 * s, 5 * s, 0, Math.PI * 2);
+                context.stroke();
+                context.beginPath();
+                context.moveTo(x - 1 * s, y - 3 * s);
+                context.lineTo(x + 1 * s, y - 3 * s);
+                context.stroke();
+                // Eyes behind glasses
+                context.fillStyle = colors.dark;
+                context.beginPath();
+                context.arc(x - 6 * s, y - 3 * s, 1.5 * s, 0, Math.PI * 2);
+                context.arc(x + 6 * s, y - 3 * s, 1.5 * s, 0, Math.PI * 2);
+                context.fill();
+            } else {
+                // Default happy
+                context.beginPath();
+                context.arc(x - 5 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+                context.arc(x + 7 * s, y - 3 * s, 2 * s, 0, Math.PI * 2);
+                context.fill();
+            }
+
+            // Blush (skip for cool/angry)
+            if (!['cool', 'angry'].includes(expression)) {
+                context.beginPath();
+                context.ellipse(x - 12 * s, y + 4 * s, 3 * s, 2 * s, 0, 0, Math.PI * 2);
+                context.ellipse(x + 12 * s, y + 4 * s, 3 * s, 2 * s, 0, 0, Math.PI * 2);
+                context.fillStyle = 'rgba(229, 57, 53, 0.35)';
+                context.fill();
+            }
+
+            context.strokeStyle = colors.dark;
+            context.lineWidth = 1.5 * s;
+            context.lineCap = 'round';
+
+            // Mouth based on expression
+            if (expression === 'surprised') {
+                context.beginPath();
+                context.ellipse(x, y + 8 * s, 3 * s, 4 * s, 0, 0, Math.PI * 2);
+                context.stroke();
+            } else if (expression === 'thinking') {
+                context.beginPath();
+                context.moveTo(x - 5 * s, y + 7 * s);
+                context.quadraticCurveTo(x - 2 * s, y + 5 * s, x, y + 7 * s);
+                context.quadraticCurveTo(x + 2 * s, y + 9 * s, x + 5 * s, y + 7 * s);
+                context.stroke();
+            } else if (expression === 'sad') {
+                context.beginPath();
+                context.moveTo(x - 5 * s, y + 9 * s);
+                context.quadraticCurveTo(x, y + 5 * s, x + 5 * s, y + 9 * s);
+                context.stroke();
+            } else if (expression === 'angry') {
+                context.beginPath();
+                context.moveTo(x - 4 * s, y + 8 * s);
+                context.lineTo(x + 4 * s, y + 8 * s);
+                context.stroke();
+            } else if (expression === 'sleepy') {
+                context.beginPath();
+                context.ellipse(x, y + 8 * s, 3 * s, 2 * s, 0, 0, Math.PI * 2);
+                context.stroke();
+            } else if (expression === 'laugh') {
+                // Big open smile
+                context.beginPath();
+                context.moveTo(x - 7 * s, y + 5 * s);
+                context.quadraticCurveTo(x, y + 14 * s, x + 7 * s, y + 5 * s);
+                context.stroke();
+                context.beginPath();
+                context.moveTo(x - 6 * s, y + 6 * s);
+                context.lineTo(x + 6 * s, y + 6 * s);
+                context.stroke();
+            } else if (expression === 'cool') {
+                // Smirk
+                context.beginPath();
+                context.moveTo(x - 3 * s, y + 7 * s);
+                context.quadraticCurveTo(x + 2 * s, y + 10 * s, x + 6 * s, y + 6 * s);
+                context.stroke();
+            } else {
+                // Default smile
+                context.beginPath();
+                context.moveTo(x - 6 * s, y + 6 * s);
+                context.quadraticCurveTo(x, y + 11 * s, x + 6 * s, y + 6 * s);
+                context.stroke();
+            }
+        }
+
+        // Draw decorations
+        function drawDecor(context, cardX, cardY, cardW, cardH, scale) {
+            const showFlag = document.getElementById('decor-flag').checked;
+            const showStars = document.getElementById('decor-stars').checked;
+            const showFire = document.getElementById('decor-fire').checked;
+            const showHearts = document.getElementById('decor-hearts').checked;
+            const showConfetti = document.getElementById('decor-confetti').checked;
+            const showLightning = document.getElementById('decor-lightning').checked;
+
+            // Polish Flag (top right corner)
+            if (showFlag) {
+                const flagW = 44 * scale;
+                const flagH = 28 * scale;
+                const flagX = cardX + cardW - flagW - 14 * scale;
+                const flagY = cardY + 14 * scale;
+
+                // Shadow
+                context.shadowColor = 'rgba(0,0,0,0.15)';
+                context.shadowBlur = 4 * scale;
+                context.shadowOffsetY = 2 * scale;
+
+                context.beginPath();
+                context.roundRect(flagX, flagY, flagW, flagH, 4 * scale);
+                context.fillStyle = '#fff';
+                context.fill();
+
+                context.shadowColor = 'transparent';
+                context.beginPath();
+                context.roundRect(flagX, flagY + flagH/2, flagW, flagH/2, [0, 0, 4 * scale, 4 * scale]);
+                context.fillStyle = '#DC143C';
+                context.fill();
+            }
+
+            // Sparkles ✨
+            if (showStars) {
+                const sparklePositions = [
+                    { x: cardX + cardW - 22 * scale, y: cardY + cardH - 50 * scale, size: 10, rotation: 0 },
+                    { x: cardX + 20 * scale, y: cardY + cardH - 65 * scale, size: 7, rotation: 15 },
+                    { x: cardX + cardW - 50 * scale, y: cardY + 50 * scale, size: 6, rotation: -10 },
+                ];
+                sparklePositions.forEach(s => {
+                    drawSparkle(context, s.x, s.y, s.size * scale, s.rotation);
+                });
+            }
+
+            // Fire 🔥
+            if (showFire) {
+                drawFire(context, cardX + cardW - 35 * scale, cardY + cardH - 55 * scale, 20 * scale);
+                drawFire(context, cardX + 25 * scale, cardY + 55 * scale, 14 * scale);
+            }
+
+            // Hearts 💖
+            if (showHearts) {
+                const heartPositions = [
+                    { x: cardX + 22 * scale, y: cardY + cardH - 50 * scale, size: 12 },
+                    { x: cardX + cardW - 28 * scale, y: cardY + 60 * scale, size: 9 },
+                    { x: cardX + 45 * scale, y: cardY + 45 * scale, size: 7 },
+                ];
+                heartPositions.forEach(h => {
+                    drawHeart(context, h.x, h.y, h.size * scale, '#FF6B9D');
+                });
+            }
+
+            // Confetti 🎉
+            if (showConfetti) {
+                const confettiColors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3', '#F38181', '#AA96DA'];
+                for (let i = 0; i < 12; i++) {
+                    const x = cardX + (20 + Math.random() * (cardW / scale - 40)) * scale;
+                    const y = cardY + (20 + Math.random() * 60) * scale;
+                    const size = (3 + Math.random() * 4) * scale;
+                    const color = confettiColors[i % confettiColors.length];
+                    const rotation = Math.random() * 360;
+                    drawConfettiPiece(context, x, y, size, color, rotation);
+                }
+            }
+
+            // Lightning ⚡
+            if (showLightning) {
+                drawLightning(context, cardX + cardW - 30 * scale, cardY + cardH - 60 * scale, 22 * scale);
+                drawLightning(context, cardX + 28 * scale, cardY + 50 * scale, 15 * scale);
+            }
+        }
+
+        // Draw sparkle/star shape
+        function drawSparkle(context, x, y, size, rotation = 0) {
+            context.save();
+            context.translate(x, y);
+            context.rotate(rotation * Math.PI / 180);
+
+            // 4-point star
+            const gradient = context.createRadialGradient(0, 0, 0, 0, 0, size);
+            gradient.addColorStop(0, '#FFFFFF');
+            gradient.addColorStop(0.3, '#FFE066');
+            gradient.addColorStop(1, '#FFD700');
+            context.fillStyle = gradient;
+
+            context.beginPath();
+            context.moveTo(0, -size);
+            context.quadraticCurveTo(size * 0.15, -size * 0.15, size, 0);
+            context.quadraticCurveTo(size * 0.15, size * 0.15, 0, size);
+            context.quadraticCurveTo(-size * 0.15, size * 0.15, -size, 0);
+            context.quadraticCurveTo(-size * 0.15, -size * 0.15, 0, -size);
+            context.fill();
+
+            context.restore();
+        }
+
+        // Draw fire flame
+        function drawFire(context, x, y, size) {
+            context.save();
+            context.translate(x, y);
+
+            // Outer flame (orange)
+            const gradientOuter = context.createRadialGradient(0, size * 0.3, 0, 0, 0, size);
+            gradientOuter.addColorStop(0, '#FFEB3B');
+            gradientOuter.addColorStop(0.4, '#FF9800');
+            gradientOuter.addColorStop(1, '#F44336');
+            context.fillStyle = gradientOuter;
+
+            context.beginPath();
+            context.moveTo(0, -size);
+            context.bezierCurveTo(size * 0.5, -size * 0.5, size * 0.6, size * 0.2, size * 0.3, size * 0.5);
+            context.quadraticCurveTo(0, size * 0.3, -size * 0.3, size * 0.5);
+            context.bezierCurveTo(-size * 0.6, size * 0.2, -size * 0.5, -size * 0.5, 0, -size);
+            context.fill();
+
+            // Inner flame (yellow)
+            const gradientInner = context.createRadialGradient(0, size * 0.2, 0, 0, 0, size * 0.5);
+            gradientInner.addColorStop(0, '#FFFFFF');
+            gradientInner.addColorStop(0.5, '#FFEB3B');
+            gradientInner.addColorStop(1, '#FF9800');
+            context.fillStyle = gradientInner;
+
+            context.beginPath();
+            context.moveTo(0, -size * 0.5);
+            context.bezierCurveTo(size * 0.25, -size * 0.2, size * 0.3, size * 0.1, size * 0.15, size * 0.3);
+            context.quadraticCurveTo(0, size * 0.15, -size * 0.15, size * 0.3);
+            context.bezierCurveTo(-size * 0.3, size * 0.1, -size * 0.25, -size * 0.2, 0, -size * 0.5);
+            context.fill();
+
+            context.restore();
+        }
+
+        // Draw heart shape
+        function drawHeart(context, x, y, size, color) {
+            context.save();
+            context.translate(x, y);
+
+            const gradient = context.createRadialGradient(0, -size * 0.2, 0, 0, 0, size * 1.2);
+            gradient.addColorStop(0, '#FFB6C1');
+            gradient.addColorStop(0.5, color);
+            gradient.addColorStop(1, '#FF1493');
+            context.fillStyle = gradient;
+
+            context.beginPath();
+            context.moveTo(0, size * 0.3);
+            context.bezierCurveTo(-size, -size * 0.3, -size * 0.5, -size, 0, -size * 0.5);
+            context.bezierCurveTo(size * 0.5, -size, size, -size * 0.3, 0, size * 0.3);
+            context.fill();
+
+            // Shine
+            context.fillStyle = 'rgba(255,255,255,0.4)';
+            context.beginPath();
+            context.ellipse(-size * 0.3, -size * 0.4, size * 0.15, size * 0.1, -30 * Math.PI / 180, 0, Math.PI * 2);
+            context.fill();
+
+            context.restore();
+        }
+
+        // Draw confetti piece
+        function drawConfettiPiece(context, x, y, size, color, rotation) {
+            context.save();
+            context.translate(x, y);
+            context.rotate(rotation * Math.PI / 180);
+            context.fillStyle = color;
+
+            // Random shape: rectangle, circle, or triangle
+            const shape = Math.floor(rotation) % 3;
+            if (shape === 0) {
+                context.fillRect(-size/2, -size/4, size, size/2);
+            } else if (shape === 1) {
+                context.beginPath();
+                context.arc(0, 0, size/2, 0, Math.PI * 2);
+                context.fill();
+            } else {
+                context.beginPath();
+                context.moveTo(0, -size/2);
+                context.lineTo(size/2, size/2);
+                context.lineTo(-size/2, size/2);
+                context.closePath();
+                context.fill();
+            }
+
+            context.restore();
+        }
+
+        // Draw lightning bolt
+        function drawLightning(context, x, y, size) {
+            context.save();
+            context.translate(x, y);
+
+            const gradient = context.createLinearGradient(0, -size, 0, size);
+            gradient.addColorStop(0, '#FFEB3B');
+            gradient.addColorStop(1, '#FFC107');
+            context.fillStyle = gradient;
+
+            context.beginPath();
+            context.moveTo(size * 0.1, -size);
+            context.lineTo(size * 0.4, -size);
+            context.lineTo(size * 0.05, -size * 0.1);
+            context.lineTo(size * 0.35, -size * 0.1);
+            context.lineTo(-size * 0.2, size);
+            context.lineTo(size * 0.05, size * 0.05);
+            context.lineTo(-size * 0.25, size * 0.05);
+            context.closePath();
+            context.fill();
+
+            // Glow
+            context.shadowColor = '#FFEB3B';
+            context.shadowBlur = size * 0.3;
+            context.fill();
+            context.shadowColor = 'transparent';
+
+            context.restore();
+        }
+
+        // Split text into lines
+        function splitLines(text) {
+            return text ? text.split('\n').filter(l => l.trim() !== '' || text.includes('\n')) : [];
+        }
+
+        // Wrap text for long lines (uses current context.font for measuring)
+        function wrapText(context, text, maxWidth, fontSize) {
+            // Font should be set before calling this function
+            const paragraphs = text.split('\n');
+            const lines = [];
+
+            for (const paragraph of paragraphs) {
+                if (paragraph === '') {
+                    lines.push('');
+                    continue;
+                }
+                const words = paragraph.split(' ');
+                let currentLine = '';
+
+                for (const word of words) {
+                    const testLine = currentLine ? currentLine + ' ' + word : word;
+                    if (context.measureText(testLine).width > maxWidth && currentLine) {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+                lines.push(currentLine);
+            }
+            return lines;
+        }
+
+        function drawCard(exportMode = false) {
+            if (exportMode) {
+                const size = getCanvasSize(true);
+                const exportCanvas = document.createElement('canvas');
+                exportCanvas.width = size.w;
+                exportCanvas.height = size.h;
+                const context = exportCanvas.getContext('2d');
+                drawCardContent(context, size.w, size.h);
+                return exportCanvas;
+            } else {
+                const size = getCanvasSize();
+                drawCardContent(ctx, size.w, size.h);
+                return null;
+            }
+        }
+
+        function drawCardContent(context, w, h) {
+            const scale = w / 540;
+            const unit = 8 * scale; // Base unit for spacing (8px grid)
+
+            // Get all values
+            const bgColor = document.getElementById('bg-color').value;
+            const noBg = document.getElementById('no-bg').checked;
+            const badgeText = document.getElementById('badge-text').value.trim();
+            const mainWord = document.getElementById('main-word').value.trim();
+            const transcription = document.getElementById('transcription').value.trim();
+            const translation = document.getElementById('translation').value.trim();
+            const subtitle = document.getElementById('subtitle').value.trim();
+            const example = document.getElementById('example').value.trim();
+            const badgeColor = document.getElementById('badge-color').value;
+            const quizOptions = document.getElementById('quiz-options').value.split('\n').filter(o => o.trim());
+
+            // Spacing values from sliders
+            const cardPaddingVal = parseInt(document.getElementById('card-padding').value) * scale;
+            const topGapVal = parseInt(document.getElementById('top-gap').value) * scale;
+            const badgeGapVal = parseInt(document.getElementById('badge-gap').value) * scale;
+            const titleGapVal = parseInt(document.getElementById('title-gap').value) * scale;
+            const lineGapVal = parseInt(document.getElementById('line-gap').value) * scale;
+            const titleSizeVal = parseInt(document.getElementById('title-size').value) / 100;
+
+            // Clear and draw background
+            context.clearRect(0, 0, w, h);
+            if (!noBg) {
+                context.fillStyle = bgColor;
+                context.fillRect(0, 0, w, h);
+            }
+
+            // Card dimensions
+            const cardMargin = unit * 3;
+            const cardRadius = unit * 2.5;
+            const cardX = cardMargin;
+            const cardY = cardMargin;
+            const cardW = w - cardMargin * 2;
+            const cardH = h - cardMargin * 2;
+            const padding = cardPaddingVal;
+            const maxTextWidth = cardW - padding * 2;
+            const centerX = w / 2;
+
+            // Draw card shadow and background
+            context.shadowColor = 'rgba(0, 0, 0, 0.1)';
+            context.shadowBlur = unit * 2;
+            context.shadowOffsetY = unit * 0.5;
+            context.beginPath();
+            context.roundRect(cardX, cardY, cardW, cardH, cardRadius);
+            context.fillStyle = colors.white;
+            context.fill();
+            context.shadowColor = 'transparent';
+            context.shadowBlur = 0;
+            context.shadowOffsetY = 0;
+
+            // Draw background image inside card if present
+            if (bgImage) {
+                const overlayOpacity = parseInt(document.getElementById('overlay-opacity').value) / 100;
+
+                // Clip to card shape
+                context.save();
+                context.beginPath();
+                context.roundRect(cardX, cardY, cardW, cardH, cardRadius);
+                context.clip();
+
+                // Calculate image dimensions based on fit mode
+                const imgRatio = bgImage.width / bgImage.height;
+                const cardRatio = cardW / cardH;
+                let drawW, drawH, drawX, drawY;
+
+                if (imageFit === 'cover') {
+                    if (imgRatio > cardRatio) {
+                        drawH = cardH;
+                        drawW = cardH * imgRatio;
+                        drawX = cardX + (cardW - drawW) / 2;
+                        drawY = cardY;
+                    } else {
+                        drawW = cardW;
+                        drawH = cardW / imgRatio;
+                        drawX = cardX;
+                        drawY = cardY + (cardH - drawH) / 2;
+                    }
+                } else {
+                    // contain
+                    if (imgRatio > cardRatio) {
+                        drawW = cardW;
+                        drawH = cardW / imgRatio;
+                        drawX = cardX;
+                        drawY = cardY + (cardH - drawH) / 2;
+                    } else {
+                        drawH = cardH;
+                        drawW = cardH * imgRatio;
+                        drawX = cardX + (cardW - drawW) / 2;
+                        drawY = cardY;
+                    }
+                }
+
+                context.drawImage(bgImage, drawX, drawY, drawW, drawH);
+
+                // Draw overlay on top of image
+                const overlayColors = {
+                    black: `rgba(0, 0, 0, ${overlayOpacity})`,
+                    green: `rgba(46, 125, 50, ${overlayOpacity})`,
+                    white: `rgba(255, 255, 255, ${overlayOpacity})`
+                };
+                context.fillStyle = overlayColors[overlayColor];
+                context.fillRect(cardX, cardY, cardW, cardH);
+
+                context.restore();
+            }
+
+            // === PHASE 1: Measure all content heights ===
+            let headerHeight = 0;
+            let badgeHeight = 0;
+            let mainContentHeight = 0;
+            let exampleHeight = 0;
+            const footerHeight = unit * 5;
+
+            // Header height
+            if (currentMascot !== 'none') {
+                headerHeight = unit * 8; // mascot area + divider
+            }
+
+            // Badge height
+            if (badgeText) {
+                badgeHeight = unit * 4.5;
+            }
+
+            // Main word height
+            let mainWordFontSize = unit * 5.5 * titleSizeVal;
+            let mainWordLines = [];
+            if (mainWord) {
+                context.font = `700 ${mainWordFontSize}px Poppins, sans-serif`;
+                while (context.measureText(mainWord.split('\n')[0]).width > maxTextWidth && mainWordFontSize > unit * 3) {
+                    mainWordFontSize -= unit * 0.25;
+                    context.font = `700 ${mainWordFontSize}px Poppins, sans-serif`;
+                }
+                mainWordLines = wrapText(context, mainWord, maxTextWidth, mainWordFontSize);
+                const lineHeight = 1 + (lineGapVal / mainWordFontSize);
+                mainContentHeight += mainWordLines.length * mainWordFontSize * lineHeight;
+            }
+
+            // Transcription height (with auto-wrap)
+            const transcriptionFontSize = unit * 2;
+            let transcriptionLines = [];
+            if (transcription && currentTemplate === 'slowo') {
+                context.font = `400 ${transcriptionFontSize}px Inter, sans-serif`;
+                transcriptionLines = wrapText(context, transcription, maxTextWidth, transcriptionFontSize);
+            }
+            mainContentHeight += transcriptionLines.length * transcriptionFontSize * 1.5;
+
+            // Translation height (with auto-wrap)
+            const translationFontSize = unit * 2.5;
+            let translationLines = [];
+            if (translation && currentTemplate === 'slowo') {
+                context.font = `600 ${translationFontSize}px Inter, sans-serif`;
+                translationLines = wrapText(context, translation, maxTextWidth, translationFontSize);
+            }
+            mainContentHeight += translationLines.length * translationFontSize * 1.5;
+
+            // Subtitle height (with auto-wrap)
+            const subtitleFontSize = unit * 2.25;
+            let subtitleLines = [];
+            if (subtitle) {
+                context.font = `500 ${subtitleFontSize}px Inter, sans-serif`;
+                subtitleLines = wrapText(context, subtitle, maxTextWidth, subtitleFontSize);
+            }
+            mainContentHeight += subtitleLines.length * subtitleFontSize * 1.5;
+
+            // Quiz options height
+            let quizHeight = 0;
+            if (currentTemplate === 'quiz' && quizOptions.length > 0) {
+                const optionH = unit * 5;
+                quizHeight = Math.min(quizOptions.length, 4) * (optionH + unit);
+                mainContentHeight += quizHeight;
+            }
+
+            // Example height
+            if (example && ['slowo', 'blad', 'podsluchano'].includes(currentTemplate)) {
+                const exFontSize = unit * 1.75;
+                context.font = `400 ${exFontSize}px Inter, sans-serif`;
+                const exLines = wrapText(context, example, maxTextWidth - unit * 4, exFontSize);
+                exampleHeight = exLines.length * exFontSize * 1.5 + unit * 3;
+            }
+
+            // === PHASE 2: Calculate vertical distribution ===
+            const fixedHeight = headerHeight + badgeHeight + footerHeight + exampleHeight + topGapVal;
+            const availableForContent = cardH - fixedHeight - padding * 2;
+            const contentGap = Math.max(unit * 2, Math.min((availableForContent - mainContentHeight) / 4, unit * 4));
+
+            // === PHASE 3: Draw everything ===
+            let y = cardY + padding + topGapVal;
+
+            // Text visibility settings
+            const textShadowIntensity = bgImage ? parseInt(document.getElementById('text-shadow-intensity')?.value || 70) / 100 : 0;
+            const useTextOutline = bgImage && (document.getElementById('text-outline')?.checked ?? true);
+
+            // Helper: draw text with enhanced visibility for image backgrounds
+            function drawTextWithEffects(text, x, y, fontSize) {
+                if (!bgImage || textShadowIntensity === 0) {
+                    context.fillText(text, x, y);
+                    return;
+                }
+
+                const savedShadow = context.shadowColor;
+                const savedBlur = context.shadowBlur;
+
+                // Layer 1: Outer glow (soft, wide)
+                context.shadowColor = `rgba(0, 0, 0, ${0.25 * textShadowIntensity})`;
+                context.shadowBlur = unit * 2.5;
+                context.shadowOffsetX = 0;
+                context.shadowOffsetY = 0;
+                context.fillText(text, x, y);
+
+                // Layer 2: Middle glow
+                context.shadowColor = `rgba(0, 0, 0, ${0.4 * textShadowIntensity})`;
+                context.shadowBlur = unit * 1.2;
+                context.fillText(text, x, y);
+
+                // Layer 3: Inner shadow (sharp)
+                context.shadowColor = `rgba(0, 0, 0, ${0.7 * textShadowIntensity})`;
+                context.shadowBlur = unit * 0.4;
+                context.shadowOffsetY = unit * 0.08;
+                context.fillText(text, x, y);
+
+                // Text outline/stroke for extra contrast
+                if (useTextOutline && fontSize) {
+                    context.shadowColor = 'transparent';
+                    context.shadowBlur = 0;
+                    context.shadowOffsetY = 0;
+                    context.strokeStyle = `rgba(0, 0, 0, ${0.35 * textShadowIntensity})`;
+                    context.lineWidth = Math.max(1, fontSize * 0.025);
+                    context.lineJoin = 'round';
+                    context.strokeText(text, x, y);
+                }
+
+                // Final clean fill
+                context.shadowColor = 'transparent';
+                context.shadowBlur = 0;
+                context.shadowOffsetY = 0;
+                context.fillText(text, x, y);
+            }
+
+            // Legacy helper for simpler cases
+            function setTextShadow(enabled) {
+                if (enabled && bgImage && textShadowIntensity > 0) {
+                    context.shadowColor = `rgba(0, 0, 0, ${0.6 * textShadowIntensity})`;
+                    context.shadowBlur = unit * 1;
+                    context.shadowOffsetX = 0;
+                    context.shadowOffsetY = unit * 0.1;
+                } else {
+                    context.shadowColor = 'transparent';
+                    context.shadowBlur = 0;
+                    context.shadowOffsetX = 0;
+                    context.shadowOffsetY = 0;
+                }
+            }
+
+            // Header with mascot
+            if (currentMascot !== 'none') {
+                const mascotSize = unit * 6;
+                const headerBlockHeight = unit * 5;
+                const headerCenterY = y + headerBlockHeight / 2;
+
+                // Mascot centered vertically
+                drawMascot(context, cardX + padding + mascotSize / 2, headerCenterY, mascotSize, currentMascot);
+
+                // Text block: single line centered vertically relative to mascot
+                const titleFontSize = unit * 2;
+
+                setTextShadow(true);
+                context.font = `700 ${titleFontSize}px Poppins, sans-serif`;
+                context.fillStyle = bgImage ? '#fff' : colors.dark;
+                context.textAlign = 'left';
+                const headerTitle = document.getElementById('header-title').value || 'Польский язык на каждый день';
+                context.fillText(headerTitle, cardX + padding + mascotSize + unit * 1.5, headerCenterY + titleFontSize * 0.35);
+                setTextShadow(false);
+
+                y += unit * 6;
+
+                // Divider
+                context.beginPath();
+                context.moveTo(cardX + padding, y);
+                context.lineTo(cardX + cardW - padding, y);
+                context.strokeStyle = bgImage ? 'rgba(255,255,255,0.3)' : '#EEEEEE';
+                context.lineWidth = 1;
+                context.stroke();
+                y += unit * 2;
+            }
+
+            // Badge
+            if (badgeText) {
+                const badgePadding = unit * 2;
+                const badgeH = unit * 4;
+                context.font = `600 ${unit * 1.5}px Inter, sans-serif`;
+                const badgeW = context.measureText('🐸 ' + badgeText).width + badgePadding * 2;
+
+                context.beginPath();
+                context.roundRect(cardX + padding, y, badgeW, badgeH, badgeH / 2);
+                context.fillStyle = badgeColor;
+                context.fill();
+
+                context.fillStyle = colors.white;
+                context.textAlign = 'left';
+                context.fillText('🐸 ' + badgeText, cardX + padding + badgePadding, y + badgeH / 2 + unit * 0.5);
+                y += badgeH + badgeGapVal;
+            }
+
+            // Main word (with enhanced visibility for image backgrounds)
+            if (mainWord) {
+                context.fillStyle = bgImage ? '#fff' : '#2E7D32';
+                context.textAlign = 'center';
+
+                const lineHeight = 1 + (lineGapVal / mainWordFontSize);
+                mainWordLines.forEach(line => {
+                    context.font = `700 ${mainWordFontSize}px Poppins, sans-serif`;
+                    drawTextWithEffects(line, centerX, y + mainWordFontSize * 0.85, mainWordFontSize);
+                    y += mainWordFontSize * lineHeight;
+                });
+                y += titleGapVal;
+            }
+
+            // Transcription
+            if (transcriptionLines.length > 0) {
+                setTextShadow(true);
+                context.font = `400 ${transcriptionFontSize}px Inter, sans-serif`;
+                context.fillStyle = bgImage ? 'rgba(255,255,255,0.85)' : '#888';
+                context.textAlign = 'center';
+
+                transcriptionLines.forEach(line => {
+                    context.fillText(line, centerX, y + transcriptionFontSize * 0.85);
+                    y += transcriptionFontSize * 1.5;
+                });
+                setTextShadow(false);
+                y += contentGap * 0.3;
+            }
+
+            // Translation
+            if (translationLines.length > 0) {
+                setTextShadow(true);
+                context.font = `600 ${translationFontSize}px Inter, sans-serif`;
+                context.fillStyle = bgImage ? '#fff' : colors.polishRed;
+                context.textAlign = 'center';
+
+                translationLines.forEach(line => {
+                    context.fillText(line, centerX, y + translationFontSize * 0.85);
+                    y += translationFontSize * 1.5;
+                });
+                setTextShadow(false);
+                y += contentGap * 0.3;
+            }
+
+            // Subtitle (with enhanced visibility)
+            if (subtitleLines.length > 0) {
+                context.font = `500 ${subtitleFontSize}px Inter, sans-serif`;
+                context.fillStyle = bgImage ? 'rgba(255,255,255,0.95)' : '#444';
+                context.textAlign = 'center';
+
+                subtitleLines.forEach(line => {
+                    drawTextWithEffects(line, centerX, y + subtitleFontSize * 0.85, subtitleFontSize);
+                    y += subtitleFontSize * 1.5;
+                });
+            }
+
+            // Quiz options
+            if (currentTemplate === 'quiz' && quizOptions.length > 0) {
+                const letters = ['🅰️', '🅱️', '🅲️', '🅳️'];
+                const optionH = unit * 5;
+                const optionW = cardW - padding * 2;
+
+                y += contentGap * 0.5;
+                context.textAlign = 'left';
+
+                quizOptions.forEach((option, i) => {
+                    if (i >= 4) return;
+
+                    context.beginPath();
+                    context.roundRect(cardX + padding, y, optionW, optionH, unit);
+                    context.fillStyle = bgImage ? 'rgba(255,255,255,0.9)' : '#f5f5f5';
+                    context.fill();
+
+                    context.font = `500 ${unit * 1.75}px Inter, sans-serif`;
+                    context.fillStyle = colors.dark;
+                    context.fillText(letters[i] + ' ' + option.trim(), cardX + padding + unit * 1.5, y + optionH / 2 + unit * 0.5);
+
+                    y += optionH + unit;
+                });
+            }
+
+            // Example (positioned from bottom)
+            if (example && ['slowo', 'blad', 'podsluchano'].includes(currentTemplate)) {
+                const exFontSize = unit * 1.75;
+                const exPadding = unit * 1.5;
+                const exWidth = cardW - padding * 2;
+
+                context.font = `400 ${exFontSize}px Inter, sans-serif`;
+                const exLines = wrapText(context, example, exWidth - unit * 4, exFontSize);
+                const exH = exLines.length * exFontSize * 1.5 + exPadding * 2;
+
+                const exY = cardY + cardH - footerHeight - exH - unit * 2;
+
+                context.beginPath();
+                context.roundRect(cardX + padding, exY, exWidth, exH, unit);
+                context.fillStyle = bgImage ? 'rgba(255,255,255,0.9)' : colors.softGreen;
+                context.fill();
+
+                context.beginPath();
+                context.roundRect(cardX + padding, exY, unit * 0.4, exH, unit * 0.2);
+                context.fillStyle = colors.frogGreen;
+                context.fill();
+
+                context.font = `400 ${exFontSize}px Inter, sans-serif`;
+                context.fillStyle = colors.dark;
+                context.textAlign = 'left';
+                exLines.forEach((line, i) => {
+                    context.fillText(line, cardX + padding + exPadding + unit, exY + exPadding + exFontSize + i * exFontSize * 1.5);
+                });
+            }
+
+            // Draw decorations
+            drawDecor(context, cardX, cardY, cardW, cardH, scale);
+
+            // Footer brand with Telegram
+            setTextShadow(true);
+            const footerText = document.getElementById('footer-username').value || '@Polski_Daily';
+            const footerFontSize = unit * 1.6;
+            context.font = `600 ${footerFontSize}px Poppins, sans-serif`;
+            const footerTextWidth = context.measureText(footerText).width;
+            const tgIconSize = unit * 2.5;
+            const totalFooterWidth = tgIconSize + unit * 0.8 + footerTextWidth;
+            const footerStartX = centerX - totalFooterWidth / 2;
+            const footerCenterY = cardY + cardH - unit * 2.5;
+
+            // Draw Telegram icon centered vertically with text
+            const tgX = footerStartX;
+            const tgY = footerCenterY - tgIconSize / 2;
+            const useLogo = bgImage ? tgLogoWhiteImg : tgLogoImg;
+            if (useLogo && useLogo.complete) {
+                context.drawImage(useLogo, tgX, tgY, tgIconSize, tgIconSize);
+            }
+
+            // Footer text aligned with icon center
+            context.fillStyle = bgImage ? '#fff' : colors.frogGreen;
+            context.textAlign = 'left';
+            context.fillText(footerText, footerStartX + tgIconSize + unit * 0.8, footerCenterY + footerFontSize * 0.35);
+            setTextShadow(false);
+
+            context.textAlign = 'left';
+        }
+
+        function exportCard() {
+            const exportCanvas = drawCard(true);
+            const link = document.createElement('a');
+            link.download = `zabka-${currentTemplate}-${new Date().toISOString().slice(0, 10)}.png`;
+            link.href = exportCanvas.toDataURL('image/png', 1.0);
+            link.click();
+        }
+
+        // Event handlers
+        document.querySelectorAll('.template-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.template-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentTemplate = btn.dataset.template;
+
+                // Show/hide fields
+                document.getElementById('transcription-group').style.display = currentTemplate === 'slowo' ? 'block' : 'none';
+                document.getElementById('translation-group').style.display = currentTemplate === 'slowo' ? 'block' : 'none';
+                document.getElementById('example-group').style.display = ['slowo', 'blad', 'podsluchano'].includes(currentTemplate) ? 'block' : 'none';
+                document.getElementById('quiz-options-group').style.display = currentTemplate === 'quiz' ? 'block' : 'none';
+
+                if (btn.dataset.badge !== undefined && currentTemplate !== 'custom') {
+                    document.getElementById('badge-text').value = btn.dataset.badge;
+                }
+
+                drawCard();
+            });
+        });
+
+        document.querySelectorAll('.mascot-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mascot-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMascot = btn.dataset.mascot;
+                drawCard();
+            });
+        });
+
+        document.querySelectorAll('.color-preset').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('bg-color').value = btn.dataset.color;
+                document.getElementById('bg-color-text').value = btn.dataset.color;
+                drawCard();
+            });
+        });
+
+        document.getElementById('bg-color').addEventListener('input', (e) => {
+            document.getElementById('bg-color-text').value = e.target.value;
+            drawCard();
+        });
+
+        document.getElementById('bg-color-text').addEventListener('input', (e) => {
+            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                document.getElementById('bg-color').value = e.target.value;
+                drawCard();
+            }
+        });
+
+        document.getElementById('badge-color').addEventListener('input', (e) => {
+            document.getElementById('badge-color-text').value = e.target.value;
+            drawCard();
+        });
+
+        document.getElementById('badge-color-text').addEventListener('input', (e) => {
+            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                document.getElementById('badge-color').value = e.target.value;
+                drawCard();
+            }
+        });
+
+        document.querySelectorAll('.decor-option input, #no-bg').forEach(cb => {
+            cb.addEventListener('change', () => drawCard());
+        });
+
+        document.querySelectorAll('input, textarea').forEach(el => {
+            el.addEventListener('input', () => drawCard());
+        });
+
+        document.querySelectorAll('.format-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFormat = btn.dataset.format;
+                setupCanvas();
+                drawCard();
+            });
+        });
+
+        // Spacing sliders value display
+        const spacingSliders = ['card-padding', 'top-gap', 'badge-gap', 'title-gap', 'line-gap', 'title-size'];
+        spacingSliders.forEach(id => {
+            const slider = document.getElementById(id);
+            const valSpan = document.getElementById(id + '-val');
+            slider.addEventListener('input', () => {
+                valSpan.textContent = slider.value;
+            });
+        });
+
+        function resetSpacing() {
+            const defaults = {
+                'card-padding': 24,
+                'top-gap': 0,
+                'badge-gap': 24,
+                'title-gap': 16,
+                'line-gap': 8,
+                'title-size': 100
+            };
+            Object.entries(defaults).forEach(([id, val]) => {
+                document.getElementById(id).value = val;
+                document.getElementById(id + '-val').textContent = val;
+            });
+            drawCard();
+        }
+
+        // Image upload handling
+        const imageUploadArea = document.getElementById('image-upload-area');
+        const imageInput = document.getElementById('bg-image');
+        const uploadPlaceholder = document.getElementById('upload-placeholder');
+        const uploadPreview = document.getElementById('upload-preview');
+        const previewThumb = document.getElementById('preview-thumb');
+        const removeImageBtn = document.getElementById('remove-image');
+        const imageOptions = document.getElementById('image-options');
+
+        function handleImageFile(file) {
+            if (!file || !file.type.startsWith('image/')) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    bgImage = img;
+                    previewThumb.src = e.target.result;
+                    uploadPlaceholder.style.display = 'none';
+                    uploadPreview.style.display = 'flex';
+                    imageOptions.style.display = 'block';
+                    drawCard();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        imageUploadArea.addEventListener('click', () => imageInput.click());
+
+        imageInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) handleImageFile(e.target.files[0]);
+        });
+
+        imageUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            imageUploadArea.classList.add('dragover');
+        });
+
+        imageUploadArea.addEventListener('dragleave', () => {
+            imageUploadArea.classList.remove('dragover');
+        });
+
+        imageUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            imageUploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) handleImageFile(e.dataTransfer.files[0]);
+        });
+
+        removeImageBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            bgImage = null;
+            imageInput.value = '';
+            uploadPlaceholder.style.display = 'flex';
+            uploadPreview.style.display = 'none';
+            imageOptions.style.display = 'none';
+            drawCard();
+        });
+
+        document.getElementById('overlay-opacity').addEventListener('input', (e) => {
+            document.getElementById('overlay-value').textContent = e.target.value + '%';
+            drawCard();
+        });
+
+        document.getElementById('text-shadow-intensity').addEventListener('input', (e) => {
+            document.getElementById('text-shadow-value').textContent = e.target.value + '%';
+            drawCard();
+        });
+
+        document.getElementById('text-outline').addEventListener('change', () => drawCard());
+
+        document.querySelectorAll('.overlay-color-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.overlay-color-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                overlayColor = btn.dataset.overlay;
+                drawCard();
+            });
+        });
+
+        document.querySelectorAll('.fit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.fit-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                imageFit = btn.dataset.fit;
+                drawCard();
+            });
+        });
+
+        // Initial draw
+        drawCard();
+    </script>
+</body>
+</html>

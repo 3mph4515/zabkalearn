@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.env
+secrets.json
+credentials.json
+
+# Telethon / Telegram session files (account access tokens)
+*.session
+*.session-journal
+
+# Bot data (user-generated)
+users.json
+quiz.db
+last_version.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Local artifacts
+.gstack/
+.claude/
+.serena/
+*.tmp
+
+# Local content / PDFs (12GB+ learning materials, not part of code)
+books/
+polish_books/
+egzamin/
+
+# Generated content plans (heavy HTML)
+content-plan.html
+content_plan.html
+content_plan_60days.html
+full-content-plan-2026.html
