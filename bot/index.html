@@ -2660,7 +2660,24 @@
 
         // Wrap text for long lines (uses current context.font for measuring)
         function wrapText(context, text, maxWidth, fontSize) {
-            // Font should be set before calling this function
+            // Font should be set before calling this function.
+            // Falls back to character-level splitting when a single token doesn't fit.
+            function splitByChar(token) {
+                const out = [];
+                let buf = '';
+                for (const ch of token) {
+                    const test = buf + ch;
+                    if (buf && context.measureText(test).width > maxWidth) {
+                        out.push(buf);
+                        buf = ch;
+                    } else {
+                        buf = test;
+                    }
+                }
+                if (buf) out.push(buf);
+                return out;
+            }
+
             const paragraphs = text.split('\n');
             const lines = [];
 
@@ -2674,14 +2691,21 @@
 
                 for (const word of words) {
                     const testLine = currentLine ? currentLine + ' ' + word : word;
-                    if (context.measureText(testLine).width > maxWidth && currentLine) {
-                        lines.push(currentLine);
-                        currentLine = word;
+                    if (context.measureText(testLine).width > maxWidth) {
+                        if (currentLine) lines.push(currentLine);
+                        // If single word still doesn't fit, break by char.
+                        if (context.measureText(word).width > maxWidth) {
+                            const parts = splitByChar(word);
+                            for (let i = 0; i < parts.length - 1; i++) lines.push(parts[i]);
+                            currentLine = parts[parts.length - 1] || '';
+                        } else {
+                            currentLine = word;
+                        }
                     } else {
                         currentLine = testLine;
                     }
                 }
-                lines.push(currentLine);
+                if (currentLine) lines.push(currentLine);
             }
             return lines;
         }
@@ -2699,6 +2723,22 @@
                 return h;
             }
             return window._lastRequiredCardHeight || h;
+        }
+
+        function setOverflowWarning(visible, msg) {
+            let el = document.getElementById('overflow-warn');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'overflow-warn';
+                el.style.cssText = 'position:absolute;top:8px;right:8px;background:#fff3e0;color:#e65100;border:1px solid #ffb74d;padding:6px 10px;border-radius:6px;font-size:.78rem;font-weight:600;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.1);max-width:240px;';
+                const wrap = document.querySelector('.preview-panel') || canvas.parentElement;
+                if (wrap) {
+                    wrap.style.position = wrap.style.position || 'relative';
+                    wrap.appendChild(el);
+                }
+            }
+            el.style.display = visible ? '' : 'none';
+            if (msg) el.textContent = msg;
         }
 
         function drawCard(exportMode = false) {
@@ -2727,6 +2767,14 @@
                     ctx.scale(dpr, dpr);
                 }
                 drawCardContent(ctx, size.w, finalH);
+                // Overflow warning if cap reached
+                const overflowed = required > cap + 1;
+                setOverflowWarning(
+                    overflowed,
+                    overflowed
+                        ? '⚠️ Контент не влез — сократи текст или примеры (нужно ' + Math.ceil(required) + 'px, доступно ' + Math.ceil(cap) + 'px)'
+                        : ''
+                );
                 return null;
             }
         }
@@ -2890,16 +2938,27 @@
                 badgeHeight = unit * 4.5;
             }
 
-            // Main word height
+            // Main word height — shrink font until widest line fits AND total
+            // line count stays reasonable (≤2 for slowo, ≤3 for others).
             let mainWordFontSize = unit * 5.5 * titleSizeVal;
             let mainWordLines = [];
             if (mainWord) {
-                context.font = `700 ${mainWordFontSize}px ${currentFont}, sans-serif`;
-                while (context.measureText(mainWord.split('\n')[0]).width > maxTextWidth && mainWordFontSize > unit * 3) {
-                    mainWordFontSize -= unit * 0.25;
+                const minSize = unit * 2.5;
+                const maxLinesAllowed = currentTemplate === 'slowo' ? 2 : 3;
+                const widestLine = (lines) => lines.reduce((m, l) => Math.max(m, context.measureText(l).width), 0);
+                while (mainWordFontSize > minSize) {
                     context.font = `700 ${mainWordFontSize}px ${currentFont}, sans-serif`;
+                    const probe = wrapText(context, mainWord, maxTextWidth, mainWordFontSize);
+                    if (widestLine(probe) <= maxTextWidth && probe.length <= maxLinesAllowed) {
+                        mainWordLines = probe;
+                        break;
+                    }
+                    mainWordFontSize -= unit * 0.25;
                 }
-                mainWordLines = wrapText(context, mainWord, maxTextWidth, mainWordFontSize);
+                if (!mainWordLines.length) {
+                    context.font = `700 ${mainWordFontSize}px ${currentFont}, sans-serif`;
+                    mainWordLines = wrapText(context, mainWord, maxTextWidth, mainWordFontSize);
+                }
                 const lineHeight = 1 + (lineGapVal / mainWordFontSize);
                 mainContentHeight += mainWordLines.length * mainWordFontSize * lineHeight;
             }
