@@ -1160,8 +1160,16 @@
             </div>
 
             <div class="form-group" id="example-group" style="display: none;">
-                <label>Пример использования</label>
-                <textarea id="example" rows="3" placeholder="Przepraszam, gdzie jest Żabka?"></textarea>
+                <label>Примеры использования <span style="color:#999;font-weight:normal;">(до 3)</span></label>
+                <div id="examples-list">
+                    <div class="example-item" data-idx="0">
+                        <textarea class="example-input" id="example" rows="2" placeholder="Przepraszam, gdzie jest Żabka?"></textarea>
+                    </div>
+                </div>
+                <button type="button" id="add-example-btn" onclick="addExample()"
+                  style="margin-top:6px;padding:6px 10px;border:1px dashed #4CAF50;background:transparent;color:#2E7D32;border-radius:6px;cursor:pointer;font-size:.8rem;">
+                  + Добавить пример
+                </button>
                 <div style="display:flex;align-items:center;gap:4px;margin-top:4px;">
                     <label style="font-size:.7rem;color:#888;margin:0;">Цвет блока:</label>
                     <input type="color" id="example-block-color" value="#E8F5E9" style="width:24px;height:24px;border:1px solid #ddd;border-radius:4px;padding:0;cursor:pointer;">
@@ -2574,18 +2582,47 @@
             return lines;
         }
 
+        // Compute required content height by drawing into an off-screen canvas.
+        // Returns desired card height (in CSS pixels for display, or canvas pixels for export).
+        function probeCardHeight(w, h) {
+            const probe = document.createElement('canvas');
+            probe.width = w;
+            probe.height = h;
+            const pctx = probe.getContext('2d');
+            try {
+                drawCardContent(pctx, w, h);
+            } catch (e) {
+                return h;
+            }
+            return window._lastRequiredCardHeight || h;
+        }
+
         function drawCard(exportMode = false) {
             if (exportMode) {
                 const size = getCanvasSize(true);
+                const required = probeCardHeight(size.w, size.h);
+                const cap = size.w * 1.65;
+                const finalH = Math.min(Math.max(size.h, required), cap);
                 const exportCanvas = document.createElement('canvas');
                 exportCanvas.width = size.w;
-                exportCanvas.height = size.h;
+                exportCanvas.height = finalH;
                 const context = exportCanvas.getContext('2d');
-                drawCardContent(context, size.w, size.h);
+                drawCardContent(context, size.w, finalH);
                 return exportCanvas;
             } else {
                 const size = getCanvasSize();
-                drawCardContent(ctx, size.w, size.h);
+                const required = probeCardHeight(size.w, size.h);
+                const cap = size.w * 1.65;
+                const finalH = Math.min(Math.max(size.h, required), cap);
+                if (Math.abs(parseFloat(canvas.style.height || '0') - finalH) > 1) {
+                    canvas.width = size.w * dpr;
+                    canvas.height = finalH * dpr;
+                    canvas.style.width = size.w + 'px';
+                    canvas.style.height = finalH + 'px';
+                    ctx = canvas.getContext('2d');
+                    ctx.scale(dpr, dpr);
+                }
+                drawCardContent(ctx, size.w, finalH);
                 return null;
             }
         }
@@ -2602,7 +2639,8 @@
             const transcription = document.getElementById('transcription').value.trim();
             const translation = document.getElementById('translation').value.trim();
             const subtitle = document.getElementById('subtitle').value.trim();
-            const example = document.getElementById('example').value.trim();
+            const examples = (typeof getExamples === 'function') ? getExamples() : [document.getElementById('example').value.trim()].filter(Boolean);
+            const example = examples[0] || '';
             const badgeColor = document.getElementById('badge-color').value;
             const quizOptions = document.getElementById('quiz-options').value.split('\n').filter(o => o.trim());
 
@@ -2797,18 +2835,33 @@
                 mainContentHeight += quizHeight;
             }
 
-            // Example height
-            if (example && ['slowo', 'blad', 'podsluchano'].includes(currentTemplate)) {
-                const exFontSize = unit * 1.75;
-                context.font = `400 ${exFontSize}px Inter, sans-serif`;
-                const exLines = wrapText(context, example, maxTextWidth - unit * 4, exFontSize);
-                exampleHeight = exLines.length * exFontSize * 1.5 + unit * 3;
+            // Example height (supports up to 3 stacked example blocks for slowo)
+            const _exFontSize = unit * 1.75;
+            const _exPadding = unit * 1.5;
+            const _exGap = unit * 1.2;
+            let _measuredExamples = [];
+            if (['slowo', 'blad', 'podsluchano'].includes(currentTemplate)) {
+                context.font = `400 ${_exFontSize}px Inter, sans-serif`;
+                const exList = (currentTemplate === 'slowo') ? examples : (example ? [example] : []);
+                exList.forEach(ex => {
+                    const lines = wrapText(context, ex, maxTextWidth - unit * 4, _exFontSize);
+                    const h = lines.length * _exFontSize * 1.5 + _exPadding * 2;
+                    _measuredExamples.push({ lines, h });
+                    exampleHeight += h + _exGap;
+                });
+                if (_measuredExamples.length) exampleHeight += unit * 1.5; // outer top spacing
             }
 
             // === PHASE 2: Calculate vertical distribution ===
             const fixedHeight = headerHeight + badgeHeight + badgeGapVal + footerHeight + exampleHeight + topGapVal;
             const availableForContent = cardH - fixedHeight - padding * 2;
             const contentGap = Math.max(unit * 2, Math.min((availableForContent - mainContentHeight) / 4, unit * 4));
+
+            // Auto-grow probe: how much vertical space the content really wants.
+            // Used by drawCard to optionally resize canvas before the visible draw.
+            window._lastRequiredCardHeight = (
+                fixedHeight + mainContentHeight + padding * 2 + unit * 4 // small breathing room
+            ) + cardMargin * 2; // outer margin
 
             // === PHASE 3: Draw everything ===
             let y = cardY + padding + topGapVal;
@@ -3017,36 +3070,43 @@
                 });
             }
 
-            // Example (positioned from bottom) - for specific templates
-            if (example && ['slowo', 'blad', 'podsluchano'].includes(currentTemplate)) {
-                const exFontSize = unit * 1.75;
-                const exPadding = unit * 1.5;
+            // Example blocks (stacked from bottom, up to 3) - for specific templates
+            if (_measuredExamples.length && ['slowo', 'blad', 'podsluchano'].includes(currentTemplate)) {
+                const exFontSize = _exFontSize;
+                const exPadding = _exPadding;
+                const exGap = _exGap;
                 const exWidth = cardW - padding * 2;
-
-                context.font = `400 ${exFontSize}px Inter, sans-serif`;
-                const exLines = wrapText(context, example, exWidth - unit * 4, exFontSize);
-                const exH = exLines.length * exFontSize * 1.5 + exPadding * 2;
-
-                const exY = cardY + cardH - footerHeight - exH - unit * 2;
 
                 const exBlockColor = document.getElementById('example-block-color')?.value || colors.softGreen;
                 const badgeColor = document.getElementById('badge-color')?.value || colors.frogGreen;
 
-                context.beginPath();
-                context.roundRect(cardX + padding, exY, exWidth, exH, unit);
-                context.fillStyle = bgImage ? 'rgba(255,255,255,0.9)' : exBlockColor;
-                context.fill();
+                // Stack up from bottom: last example sits at bottom-most position
+                const totalStackH = _measuredExamples.reduce((s, m) => s + m.h, 0)
+                    + (_measuredExamples.length - 1) * exGap;
+                let curY = cardY + cardH - footerHeight - totalStackH - unit * 2;
 
-                context.beginPath();
-                context.roundRect(cardX + padding, exY, unit * 0.5, exH, unit * 0.25);
-                context.fillStyle = badgeColor;
-                context.fill();
+                _measuredExamples.forEach(meas => {
+                    context.beginPath();
+                    context.roundRect(cardX + padding, curY, exWidth, meas.h, unit);
+                    context.fillStyle = bgImage ? 'rgba(255,255,255,0.9)' : exBlockColor;
+                    context.fill();
 
-                context.font = `400 ${exFontSize}px Inter, sans-serif`;
-                context.fillStyle = colors.dark;
-                context.textAlign = 'left';
-                exLines.forEach((line, i) => {
-                    context.fillText(line, cardX + padding + exPadding + unit, exY + exPadding + exFontSize + i * exFontSize * 1.5);
+                    context.beginPath();
+                    context.roundRect(cardX + padding, curY, unit * 0.5, meas.h, unit * 0.25);
+                    context.fillStyle = badgeColor;
+                    context.fill();
+
+                    context.font = `400 ${exFontSize}px Inter, sans-serif`;
+                    context.fillStyle = colors.dark;
+                    context.textAlign = 'left';
+                    meas.lines.forEach((line, i) => {
+                        context.fillText(
+                            line,
+                            cardX + padding + exPadding + unit,
+                            curY + exPadding + exFontSize + i * exFontSize * 1.5,
+                        );
+                    });
+                    curY += meas.h + exGap;
                 });
             }
 
@@ -3280,6 +3340,14 @@
         initDecorUI();
         initDecorDrag();
 
+        // Init existing example item (idx 0)
+        (function initExamples() {
+            const list = document.getElementById('examples-list');
+            const first = list && list.querySelector('.example-item');
+            if (first) rebuildExampleListItem(first, 0);
+            updateAddExampleBtn();
+        })();
+
         document.querySelectorAll('input, textarea').forEach(el => {
             el.addEventListener('input', () => drawCard());
         });
@@ -3480,7 +3548,8 @@
                 subtitle: document.getElementById('subtitle').value,
                 transcription: document.getElementById('transcription').value,
                 translation: document.getElementById('translation').value,
-                example: document.getElementById('example').value,
+                example: document.getElementById('example')?.value || '',
+                examples: (typeof getExamples === 'function') ? getExamples() : [],
                 badgeColor: document.getElementById('badge-color').value,
                 bgColor: document.getElementById('bg-color').value,
                 useGradient: document.getElementById('use-gradient').checked,
@@ -3546,7 +3615,13 @@
             document.getElementById('subtitle').value = state.subtitle || '';
             document.getElementById('transcription').value = state.transcription || '';
             document.getElementById('translation').value = state.translation || '';
-            document.getElementById('example').value = state.example || '';
+            if (Array.isArray(state.examples) && state.examples.length) {
+                setExamples(state.examples);
+            } else if (state.example) {
+                setExamples([state.example]);
+            } else {
+                setExamples(['']);
+            }
 
             // Set colors
             document.getElementById('badge-color').value = state.badgeColor || '#E53935';
@@ -3683,7 +3758,10 @@
                     transcription: '[розсо\u0301ндны]',
                     translation: 'разумный, здравый',
                     subtitle: 'Poziom: B1',
-                    example: 'To bardzo rozsądna decyzja.\nЭто очень разумное решение.\n\nBądź rozsądny!\nБудь разумным!',
+                    examples: [
+                        'To bardzo rozsądna decyzja.\nЭто очень разумное решение.',
+                        'Bądź rozsądny!\nБудь разумным!',
+                    ],
                     badgeText: 'S\u0141OWO DNIA'
                 },
                 quiz: {
@@ -3721,7 +3799,8 @@
             document.getElementById('badge-text').value = ex.badgeText || '';
             if (ex.transcription) document.getElementById('transcription').value = ex.transcription;
             if (ex.translation) document.getElementById('translation').value = ex.translation;
-            if (ex.example) document.getElementById('example').value = ex.example;
+            if (ex.examples) setExamples(ex.examples);
+            else if (ex.example) setExamples([ex.example]);
 
             drawCard();
         }
@@ -3729,6 +3808,93 @@
         function setExBlockColor(color) {
             document.getElementById('example-block-color').value = color;
             drawCard();
+        }
+
+        // ═══════════ EXAMPLES (dynamic list) ═══════════
+        // 3 = 3 (literal below to avoid TDZ)
+
+        function rebuildExampleListItem(div, idx) {
+            div.dataset.idx = idx;
+            div.style.cssText = 'display:flex;gap:4px;margin-bottom:4px;align-items:flex-start;';
+            const ta = div.querySelector('textarea');
+            if (ta) {
+                ta.placeholder = idx === 0
+                    ? 'Przepraszam, gdzie jest Żabka?'
+                    : 'Пример ' + (idx + 1);
+                if (idx === 0) ta.id = 'example';
+                else ta.removeAttribute('id');
+            }
+            // Remove previous control buttons (we re-add)
+            div.querySelectorAll('.rm-ex-btn').forEach(b => b.remove());
+            if (idx > 0) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'rm-ex-btn';
+                btn.textContent = '×';
+                btn.title = 'Удалить пример';
+                btn.style.cssText = 'flex:0 0 auto;width:28px;height:28px;border:1px solid #ddd;background:#fff;color:#999;border-radius:6px;cursor:pointer;font-size:1rem;line-height:1;';
+                btn.addEventListener('click', () => removeExample(div));
+                div.appendChild(btn);
+            }
+        }
+
+        function addExample() {
+            const list = document.getElementById('examples-list');
+            const items = list.querySelectorAll('.example-item');
+            if (items.length >= 3) return;
+            const idx = items.length;
+            const div = document.createElement('div');
+            div.className = 'example-item';
+            const ta = document.createElement('textarea');
+            ta.className = 'example-input';
+            ta.rows = 2;
+            ta.addEventListener('input', drawCard);
+            div.appendChild(ta);
+            list.appendChild(div);
+            rebuildExampleListItem(div, idx);
+            updateAddExampleBtn();
+            drawCard();
+        }
+
+        function removeExample(div) {
+            const list = document.getElementById('examples-list');
+            div.remove();
+            // Re-index remaining
+            list.querySelectorAll('.example-item').forEach((d, i) => rebuildExampleListItem(d, i));
+            updateAddExampleBtn();
+            drawCard();
+        }
+
+        function updateAddExampleBtn() {
+            const list = document.getElementById('examples-list');
+            const count = list.querySelectorAll('.example-item').length;
+            const btn = document.getElementById('add-example-btn');
+            if (btn) btn.style.display = count >= 3 ? 'none' : '';
+        }
+
+        function getExamples() {
+            return [...document.querySelectorAll('.example-input')]
+                .map(t => t.value.trim())
+                .filter(Boolean);
+        }
+
+        function setExamples(arr) {
+            const list = document.getElementById('examples-list');
+            list.innerHTML = '';
+            const values = (arr && arr.length) ? arr : [''];
+            values.slice(0, 3).forEach((val, idx) => {
+                const div = document.createElement('div');
+                div.className = 'example-item';
+                const ta = document.createElement('textarea');
+                ta.className = 'example-input';
+                ta.rows = 2;
+                ta.value = val;
+                ta.addEventListener('input', drawCard);
+                div.appendChild(ta);
+                list.appendChild(div);
+                rebuildExampleListItem(div, idx);
+            });
+            updateAddExampleBtn();
         }
 
         // ═══════════ RANDOM STYLE ═══════════
@@ -3787,6 +3953,23 @@
 
         let pubChannel = 'debug';
         let pubConnected = false;
+
+        // Word duplicate check across debug + production. Returns {exists, matches[], channel}.
+        async function checkDuplicateWord(word, primaryChannel) {
+            const channels = [primaryChannel, primaryChannel === 'production' ? 'debug' : 'production'];
+            for (const ch of channels) {
+                try {
+                    const r = await fetch('/api/check-word?word=' + encodeURIComponent(word) + '&channel=' + ch);
+                    if (!r.ok) continue;
+                    const d = await r.json();
+                    if (d.ok && d.exists) {
+                        return { exists: true, matches: d.matches, channel: ch };
+                    }
+                } catch (_) {}
+            }
+            return { exists: false, matches: [] };
+        }
+
         const PUB_TAGS = [
             '#slowodnia', '#polski', '#polski_daily', '#polskib1',
             '#naukajezyka', '#jezykpolski', '#wyrazenie_dnia', '#quiz'
@@ -3877,7 +4060,9 @@
         function pubAutoText() {
             const word = document.getElementById('main-word').value || '';
             const translation = document.getElementById('translation').value || '';
-            const example = document.getElementById('example').value || '';
+            const exampleList = (typeof getExamples === 'function')
+                ? getExamples()
+                : [((document.getElementById('example')||{}).value || '').trim()].filter(Boolean);
             const subtitle = document.getElementById('subtitle').value || '';
             const transcription = document.getElementById('transcription').value || '';
 
@@ -3885,12 +4070,9 @@
 
             if (word) {
                 let firstLine = word;
+                if (transcription && transcription.trim()) firstLine += ' ' + transcription.trim();
                 if (translation) firstLine += ' - ' + translation;
                 lines.push(firstLine);
-            }
-
-            if (transcription) {
-                lines.push('[' + transcription + ']');
             }
 
             if (subtitle) {
@@ -3898,11 +4080,13 @@
                 lines.push(subtitle);
             }
 
-            if (example) {
+            if (exampleList.length) {
                 lines.push('');
-                lines.push('\u041F\u0440\u0438\u043C\u0435\u0440\u044B:');
-                example.split('\n').forEach(ex => {
-                    if (ex.trim()) lines.push('\u2022 ' + ex.trim());
+                lines.push(exampleList.length > 1 ? '\u041F\u0440\u0438\u043C\u0435\u0440\u044B:' : '\u041F\u0440\u0438\u043C\u0435\u0440:');
+                exampleList.forEach(ex => {
+                    ex.split('\n').forEach(line => {
+                        if (line.trim()) lines.push('\u2022 ' + line.trim());
+                    });
                 });
             }
 
@@ -3943,6 +4127,18 @@
                 if (!scheduleTime) { pubToast('\u0412\u044B\u0431\u0435\u0440\u0438 \u0434\u0430\u0442\u0443', 'er'); return; }
             }
 
+            const word = (document.getElementById('main-word').value || '').trim();
+
+            // Duplicate check (Słowo dnia template only)
+            if (currentTemplate === 'slowo' && word) {
+                const dup = await checkDuplicateWord(word, pubChannel);
+                if (dup && dup.exists) {
+                    const m = dup.matches[0];
+                    const ok = confirm('Слово «' + m.word + '» уже опубликовано ' + (m.date||'').slice(0,10) + ' (msg #' + m.msg_id + '). Всё равно опубликовать?');
+                    if (!ok) return;
+                }
+            }
+
             const withImage = document.getElementById('pubWithImage').checked;
             let imageData = null;
             if (withImage) {
@@ -3959,8 +4155,10 @@
                 const payload = {
                     channel: pubChannel,
                     cards: [{
-                        word: document.getElementById('main-word').value || '',
+                        word,
                         translation: document.getElementById('translation').value || '',
+                        transcription: document.getElementById('transcription').value || '',
+                        examples: (typeof getExamples === 'function') ? getExamples() : [],
                         post_text: text,
                         schedule_time: scheduleTime || new Date().toISOString().slice(0, 16),
                         image: imageData,

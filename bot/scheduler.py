@@ -12,6 +12,7 @@ import base64
 import hashlib
 import hmac
 import logging
+import re
 import secrets
 import time
 from collections import defaultdict
@@ -42,6 +43,18 @@ CHANNELS = {
     "debug": -1003772746301,
     "production": -1003738416290,
 }
+
+WORD_HISTORY_FILE = os.path.join(BASE_DIR, "word_history.json")
+WORD_HISTORY_TTL_SEC = 60 * 30  # 30 min cache
+WORD_HISTORY_FETCH_LIMIT = 1000
+
+# Matches a Słowo dnia card by its first line: `WORD - перевод` or `🇵🇱 WORD - перевод`.
+# Polish word (latin + diacritics) + optional space, then dash, then cyrillic translation start.
+# Anchoring on cyrillic right side filters out non-słowo cards (ciekawostka, news, etc).
+WORD_RE = re.compile(
+    r"^(?:🇵🇱\s+)?([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż][A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż\s\-']{0,80}?)\s*[-–—]\s*[А-Яа-яЁё]",
+    re.UNICODE,
+)
 
 # Rate limiting: max requests per IP
 RATE_LIMIT_WINDOW = 60  # seconds
@@ -171,17 +184,114 @@ async def init_telethon():
     log.info("Telethon connected as %s (id=%d)", me.first_name, me.id)
 
 
-def format_card_text(word, translation, example):
+def format_card_text(word, translation, examples=None, transcription=None):
+    if isinstance(examples, str):
+        examples = [examples] if examples.strip() else []
+    examples = [e for e in (examples or []) if e and e.strip()]
+
+    head = f"\U0001f1f5\U0001f1f1 <b>{word}</b>"
+    if transcription and transcription.strip():
+        head += f" {transcription.strip()}"
+    head += f" - {translation}"
+
     lines = [
         "\U0001f438 <b>S\u0142owo dnia</b>",
         "",
-        f"\U0001f1f5\U0001f1f1 <b>{word}</b> - {translation}",
+        head,
     ]
-    if example:
+    for ex in examples:
         lines.append("")
-        lines.append(f"\U0001f4dd <i>{example}</i>")
+        lines.append(f"\U0001f4dd <i>{ex}</i>")
     lines.extend(["", "#s\u0142owodnia #polski", "@zabka_learn"])
     return "\n".join(lines)
+
+
+# \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 WORD HISTORY \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+
+def load_word_history():
+    if not os.path.exists(WORD_HISTORY_FILE):
+        return {"channels": {}, "fetched_at": {}}
+    try:
+        with open(WORD_HISTORY_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"channels": {}, "fetched_at": {}}
+
+
+def save_word_history(data):
+    tmp = WORD_HISTORY_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, WORD_HISTORY_FILE)
+
+
+def extract_word_from_message(text):
+    if not text:
+        return None
+    # Słowo dnia is always identified by its first line.
+    first_line = text.split("\n", 1)[0].strip()
+    if not first_line:
+        return None
+    m = WORD_RE.match(first_line)
+    if not m:
+        return None
+    word = m.group(1).strip()
+    if not word or len(word) > 80:
+        return None
+    return word
+
+
+_PL_DIACRITICS = str.maketrans({
+    "ą": "a", "ć": "c", "ę": "e", "ł": "l", "ń": "n",
+    "ó": "o", "ś": "s", "ź": "z", "ż": "z",
+    "Ą": "a", "Ć": "c", "Ę": "e", "Ł": "l", "Ń": "n",
+    "Ó": "o", "Ś": "s", "Ź": "z", "Ż": "z",
+})
+
+
+def normalize_word(word):
+    s = (word or "").strip().lower()
+    s = s.translate(_PL_DIACRITICS)
+    # Collapse internal whitespace so "postawić na swoim" matches "Postawić  Na Swoim"
+    s = re.sub(r"\s+", " ", s)
+    return s
+
+
+async def fetch_channel_words(channel_key, limit=WORD_HISTORY_FETCH_LIMIT):
+    channel_id = CHANNELS.get(channel_key)
+    if not channel_id:
+        return []
+    entity = await client.get_entity(channel_id)
+    found = []
+    async for msg in client.iter_messages(entity, limit=limit):
+        text = msg.message or ""
+        word = extract_word_from_message(text)
+        if not word:
+            continue
+        found.append({
+            "word": word,
+            "key": normalize_word(word),
+            "msg_id": msg.id,
+            "date": msg.date.astimezone(WARSAW_TZ).isoformat(),
+        })
+    return found
+
+
+async def refresh_word_history(channel_key):
+    items = await fetch_channel_words(channel_key)
+    data = load_word_history()
+    data.setdefault("channels", {})[channel_key] = items
+    data.setdefault("fetched_at", {})[channel_key] = time.time()
+    save_word_history(data)
+    return items
+
+
+async def get_word_history(channel_key, force_refresh=False):
+    data = load_word_history()
+    fetched = data.get("fetched_at", {}).get(channel_key, 0)
+    if force_refresh or (time.time() - fetched) > WORD_HISTORY_TTL_SEC:
+        return await refresh_word_history(channel_key)
+    return data.get("channels", {}).get(channel_key, [])
 
 
 # ═══════════ HANDLERS ═══════════
@@ -224,9 +334,22 @@ async def handle_schedule(request):
 
         text = card.get("post_text", "")
         if not text:
-            examples = card.get("examples", [])
-            example_str = examples[0].get("pl", "") if examples else ""
-            text = format_card_text(word, translation, example_str)
+            examples_raw = card.get("examples", []) or []
+            example_strs = []
+            for e in examples_raw:
+                if isinstance(e, str):
+                    if e.strip():
+                        example_strs.append(e.strip())
+                elif isinstance(e, dict):
+                    s = (e.get("pl") or e.get("text") or "").strip()
+                    if s:
+                        example_strs.append(s)
+            text = format_card_text(
+                word,
+                translation,
+                examples=example_strs,
+                transcription=card.get("transcription"),
+            )
 
         image_b64 = card.get("image")
 
@@ -250,6 +373,18 @@ async def handle_schedule(request):
             date_str = schedule_dt.isoformat() if schedule_dt else "now"
             results.append({"id": msg.id, "word": word, "date": date_str, "ok": True})
             log.info("Published '%s' %s (msg_id=%d)", word, date_str, msg.id)
+
+            # Append to local word history immediately so duplicate-check stays fresh.
+            if word:
+                hist = load_word_history()
+                ch_list = hist.setdefault("channels", {}).setdefault(channel_key, [])
+                ch_list.insert(0, {
+                    "word": word,
+                    "key": normalize_word(word),
+                    "msg_id": msg.id,
+                    "date": (schedule_dt or datetime.now(WARSAW_TZ)).isoformat(),
+                })
+                save_word_history(hist)
 
         except Exception as e:
             log.error("Failed to publish '%s': %s", word, e)
@@ -335,6 +470,36 @@ async def handle_status(request):
     return web.json_response({"ok": True, "account": me.first_name, "account_id": me.id})
 
 
+async def handle_word_history(request):
+    channel_key = request.query.get("channel", "production")
+    if channel_key not in CHANNELS:
+        return web.json_response({"ok": False, "error": "Unknown channel"}, status=400)
+    force = request.query.get("refresh") == "1"
+    try:
+        items = await get_word_history(channel_key, force_refresh=force)
+        return web.json_response({"ok": True, "channel": channel_key, "items": items})
+    except Exception as e:
+        log.error("Word history fetch failed: %s", e)
+        return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+
+async def handle_check_word(request):
+    word = request.query.get("word", "")
+    channel_key = request.query.get("channel", "production")
+    if not word.strip():
+        return web.json_response({"ok": False, "error": "Empty word"}, status=400)
+    if channel_key not in CHANNELS:
+        return web.json_response({"ok": False, "error": "Unknown channel"}, status=400)
+    items = await get_word_history(channel_key)
+    key = normalize_word(word)
+    matches = [i for i in items if i["key"] == key]
+    return web.json_response({
+        "ok": True,
+        "exists": len(matches) > 0,
+        "matches": matches[:5],
+    })
+
+
 # ═══════════ APP ═══════════
 
 async def start_app():
@@ -351,6 +516,8 @@ async def start_app():
     app.router.add_get("/api/scheduled", handle_scheduled_list)
     app.router.add_delete("/api/scheduled", handle_delete_scheduled)
     app.router.add_post("/api/reschedule", handle_reschedule)
+    app.router.add_get("/api/word-history", handle_word_history)
+    app.router.add_get("/api/check-word", handle_check_word)
 
     runner = web.AppRunner(app)
     await runner.setup()
