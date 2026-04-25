@@ -1087,6 +1087,7 @@
                 <button class="preset-btn" onclick="loadPreset(2)">2</button>
                 <button class="preset-btn" onclick="loadPreset(3)">3</button>
                 <button class="preset-btn" onclick="clearPresets()">🗑️</button>
+                <button class="preset-btn" onclick="openQueueModal()" style="margin-left:auto;background:#fff3e0;color:#e65100;border-color:#ffb74d;">📋 Очередь</button>
             </div>
 
             <div class="template-selector">
@@ -1478,6 +1479,109 @@
                     <button type="button" onclick="loadScheduledEditor()" style="padding:2px 8px;font-size:.7rem;border:1px solid #ddd;border-radius:5px;background:#fff;cursor:pointer;">🔄</button>
                 </div>
                 <div id="schedPanel" style="max-height:250px;overflow-y:auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ QUEUE MODAL ═══════════ -->
+    <div id="queueModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#fff;border-radius:14px;padding:20px;max-width:720px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <h2 style="font-family:Poppins,sans-serif;color:#2E7D32;margin:0;">📋 Очередь публикаций</h2>
+                <button onclick="closeQueueModal()" style="background:transparent;border:none;font-size:1.4rem;cursor:pointer;color:#999;">×</button>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr;gap:14px;">
+                <div>
+                    <label style="font-size:.78rem;font-weight:600;color:#666;text-transform:uppercase;display:block;margin-bottom:4px;">JSON со словами</label>
+                    <textarea id="queueJson" rows="10" placeholder='[{"word":"rozsądny","transcription":"[розсо́ндны]","translation":"разумный","examples":["To rozsądna decyzja.","Bądź rozsądny!"],"subtitle":"Poziom: B1"}]'
+                      style="width:100%;font-family:'Courier New',monospace;font-size:.78rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:vertical;"></textarea>
+                    <div style="display:flex;gap:6px;margin-top:4px;font-size:.75rem;">
+                        <button onclick="loadQueueExample()" style="padding:4px 8px;border:1px solid #ddd;background:#f5f5f5;border-radius:5px;cursor:pointer;">Пример</button>
+                        <button onclick="loadQueueFromFile()" style="padding:4px 8px;border:1px solid #ddd;background:#f5f5f5;border-radius:5px;cursor:pointer;">Из файла</button>
+                        <input type="file" id="queueFile" accept=".json" style="display:none;" onchange="onQueueFileSelected(event)">
+                        <span id="queueParsedHint" style="margin-left:auto;color:#666;align-self:center;"></span>
+                    </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                    <div>
+                        <label style="font-size:.7rem;font-weight:600;color:#666;text-transform:uppercase;">Дата старта</label>
+                        <input type="date" id="qStartDate" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;">
+                    </div>
+                    <div>
+                        <label style="font-size:.7rem;font-weight:600;color:#666;text-transform:uppercase;">Время</label>
+                        <input type="time" id="qStartTime" value="08:00" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;">
+                    </div>
+                    <div>
+                        <label style="font-size:.7rem;font-weight:600;color:#666;text-transform:uppercase;">Канал</label>
+                        <select id="qChannel" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;">
+                            <option value="debug">Debug</option>
+                            <option value="production">Production</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div>
+                        <label style="font-size:.7rem;font-weight:600;color:#666;text-transform:uppercase;">Интервал</label>
+                        <select id="qInterval" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;">
+                            <option value="1">Каждый день</option>
+                            <option value="2">Через день</option>
+                            <option value="3">Раз в 3 дня</option>
+                            <option value="7">Раз в неделю</option>
+                            <option value="0">Свой пресет</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:.7rem;font-weight:600;color:#666;text-transform:uppercase;">Шаблон карточки</label>
+                        <select id="qTemplate" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;">
+                            <option value="slowo" selected>Słowo dnia</option>
+                            <option value="ciekawostka">Ciekawostka</option>
+                            <option value="blad">Błąd dnia</option>
+                            <option value="podsluchano">Podsłuchano</option>
+                            <option value="custom">Своя</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="qSkipDup" style="display:flex;align-items:center;gap:6px;font-size:.85rem;">
+                    <input type="checkbox" id="qSkipDupCb" checked>
+                    <label for="qSkipDupCb">Пропускать дубликаты (проверка по истории канала)</label>
+                </div>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #eee;padding-top:12px;">
+                    <button onclick="closeQueueModal()" style="padding:8px 14px;border:1px solid #ddd;background:#fff;border-radius:7px;cursor:pointer;">Отмена</button>
+                    <button onclick="startQueue()" style="padding:8px 14px;border:none;background:#4CAF50;color:#fff;border-radius:7px;cursor:pointer;font-weight:600;">Начать обработку</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ QUEUE FLOATING BAR ═══════════ -->
+    <div id="queueBar" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #4CAF50;padding:10px 16px;z-index:9000;box-shadow:0 -4px 20px rgba(0,0,0,.1);">
+        <div style="max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div style="display:flex;flex-direction:column;flex:0 0 auto;">
+                <span style="font-size:.7rem;color:#666;text-transform:uppercase;font-weight:600;">Карточка</span>
+                <span id="qbProgress" style="font-family:Poppins,sans-serif;font-size:1rem;color:#2E7D32;font-weight:700;">0 / 0</span>
+            </div>
+            <div style="display:flex;flex-direction:column;flex:0 0 auto;">
+                <span style="font-size:.7rem;color:#666;text-transform:uppercase;font-weight:600;">Запланировано на</span>
+                <span id="qbDate" style="font-size:.85rem;font-weight:600;">—</span>
+            </div>
+            <div style="display:flex;flex-direction:column;flex:0 0 auto;">
+                <span style="font-size:.7rem;color:#666;text-transform:uppercase;font-weight:600;">Канал</span>
+                <span id="qbChannel" style="font-size:.85rem;font-weight:600;">—</span>
+            </div>
+            <div style="display:flex;flex-direction:column;flex:0 0 auto;">
+                <span style="font-size:.7rem;color:#666;text-transform:uppercase;font-weight:600;">Готово / Пропущено</span>
+                <span id="qbStats" style="font-size:.85rem;">0 / 0</span>
+            </div>
+            <div id="qbDupWarn" style="display:none;background:#fff3e0;color:#e65100;border:1px solid #ffb74d;padding:4px 8px;border-radius:6px;font-size:.78rem;font-weight:600;">⚠️ дубликат</div>
+            <div style="margin-left:auto;display:flex;gap:6px;">
+                <button onclick="queueAction('skip')" style="padding:8px 12px;border:1px solid #ddd;background:#fff;border-radius:7px;cursor:pointer;">Пропустить</button>
+                <button onclick="queueAction('schedule')" id="qbSchedBtn" style="padding:8px 14px;border:none;background:#4CAF50;color:#fff;border-radius:7px;cursor:pointer;font-weight:600;">В отложку → след.</button>
+                <button onclick="queueAction('end')" style="padding:8px 12px;border:1px solid #E53935;background:#fff;color:#E53935;border-radius:7px;cursor:pointer;">Завершить</button>
             </div>
         </div>
     </div>
@@ -4285,6 +4389,263 @@
 
         // Init publish on load
         initPublish();
+
+        // ═══════════ QUEUE (multi-card pipeline) ═══════════
+        const queueState = {
+            cards: [],         // parsed input cards
+            schedule: [],      // ISO datetime strings, parallel to cards
+            channel: 'debug',
+            template: 'slowo',
+            skipDup: true,
+            idx: 0,            // current card index
+            doneCount: 0,
+            skippedCount: 0,
+            active: false,
+        };
+
+        function openQueueModal() {
+            const today = new Date();
+            today.setDate(today.getDate() + 1); // default tomorrow
+            document.getElementById('qStartDate').value = today.toISOString().slice(0, 10);
+            document.getElementById('queueModal').style.display = 'flex';
+        }
+
+        function closeQueueModal() {
+            document.getElementById('queueModal').style.display = 'none';
+        }
+
+        function loadQueueExample() {
+            const sample = [
+                { word: 'rozsądny', transcription: '[розсо́ндны]', translation: 'разумный, здравый', examples: ['To rozsądna decyzja.\nЭто разумное решение.', 'Bądź rozsądny!\nБудь разумным!'], subtitle: 'Poziom: B1' },
+                { word: 'cegła', translation: 'кирпич', examples: ['Dom z czerwonej cegły.\nДом из красного кирпича.'], subtitle: 'Słowotwórstwo' },
+                { word: 'usterka', translation: 'неисправность, поломка', examples: ['Mała usterka w samochodzie.\nМелкая поломка в машине.', 'Zgłoś usterkę.\nСообщи о неисправности.'] },
+            ];
+            document.getElementById('queueJson').value = JSON.stringify(sample, null, 2);
+            previewQueueJson();
+        }
+
+        function loadQueueFromFile() {
+            document.getElementById('queueFile').click();
+        }
+
+        function onQueueFileSelected(ev) {
+            const f = ev.target.files[0];
+            if (!f) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById('queueJson').value = e.target.result;
+                previewQueueJson();
+            };
+            reader.readAsText(f);
+        }
+
+        function parseQueueJson(text) {
+            const j = JSON.parse(text);
+            const arr = Array.isArray(j) ? j : (Array.isArray(j.cards) ? j.cards : null);
+            if (!arr) throw new Error('Ожидается массив или {cards: [...]}');
+            return arr.map((c, i) => {
+                if (!c.word) throw new Error(`Карточка #${i + 1}: отсутствует "word"`);
+                return {
+                    word: String(c.word).trim(),
+                    transcription: c.transcription || '',
+                    translation: c.translation || '',
+                    examples: Array.isArray(c.examples) ? c.examples.filter(e => e && e.trim()) : (c.example ? [c.example] : []),
+                    subtitle: c.subtitle || '',
+                    badgeText: c.badgeText || '',
+                };
+            });
+        }
+
+        function previewQueueJson() {
+            const txt = document.getElementById('queueJson').value.trim();
+            const hint = document.getElementById('queueParsedHint');
+            if (!txt) { hint.textContent = ''; return; }
+            try {
+                const cards = parseQueueJson(txt);
+                hint.textContent = '✓ ' + cards.length + ' карточек';
+                hint.style.color = '#2E7D32';
+            } catch (e) {
+                hint.textContent = '✗ ' + e.message;
+                hint.style.color = '#E53935';
+            }
+        }
+
+        document.getElementById('queueJson')?.addEventListener('input', previewQueueJson);
+
+        function computeScheduleDates(start, time, intervalDays, count) {
+            const [h, m] = time.split(':').map(Number);
+            const dates = [];
+            const base = new Date(start + 'T00:00:00');
+            for (let i = 0; i < count; i++) {
+                const d = new Date(base);
+                d.setDate(base.getDate() + i * intervalDays);
+                d.setHours(h, m, 0, 0);
+                dates.push(d);
+            }
+            return dates;
+        }
+
+        function dateToWarsawIso(d) {
+            // Format as local YYYY-MM-DDTHH:MM:SS (no timezone) for backend; backend localizes to Warsaw.
+            const pad = n => String(n).padStart(2, '0');
+            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+                + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':00';
+        }
+
+        async function startQueue() {
+            const txt = document.getElementById('queueJson').value.trim();
+            if (!txt) { alert('Вставь JSON со словами'); return; }
+            let cards;
+            try { cards = parseQueueJson(txt); }
+            catch (e) { alert('Ошибка JSON: ' + e.message); return; }
+            if (!cards.length) { alert('Список пуст'); return; }
+
+            const startDate = document.getElementById('qStartDate').value;
+            const startTime = document.getElementById('qStartTime').value;
+            const interval = parseInt(document.getElementById('qInterval').value, 10);
+            if (!startDate || !startTime || !interval) { alert('Заполни план расписания'); return; }
+
+            queueState.cards = cards;
+            queueState.schedule = computeScheduleDates(startDate, startTime, interval, cards.length);
+            queueState.channel = document.getElementById('qChannel').value;
+            queueState.template = document.getElementById('qTemplate').value;
+            queueState.skipDup = document.getElementById('qSkipDupCb').checked;
+            queueState.idx = 0;
+            queueState.doneCount = 0;
+            queueState.skippedCount = 0;
+            queueState.active = true;
+
+            closeQueueModal();
+            document.getElementById('queueBar').style.display = 'block';
+            document.body.style.paddingBottom = '90px';
+            await loadCurrentQueueCard();
+        }
+
+        async function loadCurrentQueueCard() {
+            if (!queueState.active || queueState.idx >= queueState.cards.length) {
+                endQueue('Все карточки обработаны');
+                return;
+            }
+            const card = queueState.cards[queueState.idx];
+            const date = queueState.schedule[queueState.idx];
+
+            // Switch template
+            document.querySelector('[data-template="' + queueState.template + '"]')?.click();
+
+            // Fill fields
+            document.getElementById('main-word').value = card.word || '';
+            document.getElementById('translation').value = card.translation || '';
+            document.getElementById('transcription').value = card.transcription || '';
+            document.getElementById('subtitle').value = card.subtitle || '';
+            if (card.badgeText) document.getElementById('badge-text').value = card.badgeText;
+            setExamples(card.examples && card.examples.length ? card.examples : ['']);
+            drawCard();
+            // Refresh post text from new card data
+            if (typeof pubAutoText === 'function') pubAutoText();
+
+            // Switch publish channel
+            const chBtn = document.querySelector('#pubChTog button[data-ch="' + queueState.channel + '"]');
+            if (chBtn) chBtn.click();
+
+            // Update bar
+            document.getElementById('qbProgress').textContent = (queueState.idx + 1) + ' / ' + queueState.cards.length;
+            document.getElementById('qbDate').textContent = date.toLocaleString('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            document.getElementById('qbChannel').textContent = queueState.channel === 'production' ? '🔴 Prod' : '🟢 Debug';
+            document.getElementById('qbStats').textContent = queueState.doneCount + ' / ' + queueState.skippedCount;
+
+            // Duplicate warn
+            const dupEl = document.getElementById('qbDupWarn');
+            dupEl.style.display = 'none';
+            if (card.word) {
+                try {
+                    const dup = await checkDuplicateWord(card.word, queueState.channel);
+                    if (dup.exists) {
+                        const m = dup.matches[0];
+                        dupEl.textContent = '⚠️ дубликат (' + (m.date || '').slice(0, 10) + ', ' + dup.channel + ')';
+                        dupEl.style.display = '';
+                        if (queueState.skipDup) {
+                            queueState.skippedCount++;
+                            queueState.idx++;
+                            return loadCurrentQueueCard();
+                        }
+                    }
+                } catch (_) {}
+            }
+        }
+
+        async function queueAction(action) {
+            if (!queueState.active) return;
+
+            if (action === 'end') {
+                endQueue('Очередь завершена пользователем');
+                return;
+            }
+
+            if (action === 'skip') {
+                queueState.skippedCount++;
+                queueState.idx++;
+                await loadCurrentQueueCard();
+                return;
+            }
+
+            if (action === 'schedule') {
+                const card = queueState.cards[queueState.idx];
+                const date = queueState.schedule[queueState.idx];
+                const btn = document.getElementById('qbSchedBtn');
+                btn.disabled = true;
+                btn.textContent = 'Отправка…';
+                try {
+                    const exportCanvas = drawCard(true);
+                    const imageData = exportCanvas.toDataURL('image/png');
+                    // Use editor's current values (user may have edited) for safety
+                    const word = document.getElementById('main-word').value.trim() || card.word;
+                    const translation = document.getElementById('translation').value.trim() || card.translation;
+                    const transcription = document.getElementById('transcription').value.trim() || card.transcription;
+                    const examples = (typeof getExamples === 'function') ? getExamples() : card.examples;
+                    const post_text = document.getElementById('pubText')?.value.trim() || '';
+
+                    const payload = {
+                        channel: queueState.channel,
+                        publish_now: false,
+                        cards: [{
+                            word, translation, transcription, examples,
+                            post_text,
+                            schedule_time: dateToWarsawIso(date),
+                            image: imageData,
+                        }],
+                    };
+                    const r = await fetch('/api/schedule', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    }).then(r => r.json());
+
+                    if (r.ok && r.results[0].ok) {
+                        queueState.doneCount++;
+                        queueState.idx++;
+                        pubToast('✓ ' + word + ' → ' + date.toLocaleDateString('pl-PL'), 'ok');
+                        await loadCurrentQueueCard();
+                    } else {
+                        const err = (r.results && r.results[0] && r.results[0].error) || r.error || 'Ошибка';
+                        pubToast('✗ ' + err, 'er');
+                    }
+                } catch (e) {
+                    pubToast('✗ ' + e.message, 'er');
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'В отложку → след.';
+                }
+            }
+        }
+
+        function endQueue(reason) {
+            queueState.active = false;
+            document.getElementById('queueBar').style.display = 'none';
+            document.body.style.paddingBottom = '';
+            pubToast(reason + '. Готово: ' + queueState.doneCount + ', пропущено: ' + queueState.skippedCount, 'ok');
+            // Refresh scheduled list
+            if (typeof loadScheduledEditor === 'function') loadScheduledEditor();
+        }
 
         // Initial draw
         drawCard();
