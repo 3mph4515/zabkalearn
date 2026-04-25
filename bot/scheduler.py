@@ -149,7 +149,16 @@ async def auth_middleware(request, handler):
             return web.json_response({"ok": False, "error": "Unauthorized"}, status=401)
         return web.Response(text=LOGIN_PAGE, content_type="text/html", charset="utf-8")
 
-    return await handler(request)
+    response = await handler(request)
+
+    # If auth came from query/header (not cookie), persist cookie so JS fetches work
+    if not request.cookies.get("zt"):
+        response.set_cookie(
+            "zt", AUTH_TOKEN,
+            max_age=86400, path="/", samesite="Strict", httponly=False,
+        )
+
+    return response
 
 
 # ═══════════ TELETHON ═══════════
