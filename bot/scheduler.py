@@ -26,6 +26,12 @@ from telethon.tl.functions.messages import (
     GetScheduledHistoryRequest,
     DeleteScheduledMessagesRequest,
 )
+from telethon.tl.types import (
+    InputMediaPoll,
+    Poll,
+    PollAnswer,
+    TextWithEntities,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
@@ -306,6 +312,114 @@ async def handle_editor(request):
         return web.Response(text=f.read(), content_type="text/html", charset="utf-8")
 
 
+POLL_QUESTION_MAX = 300
+POLL_OPTION_MAX = 100
+POLL_MAX_OPTIONS = 10
+POLL_SOLUTION_MAX = 200
+
+
+def _truncate(s, n):
+    s = (s or "").strip()
+    return s if len(s) <= n else s[: n - 1] + "…"
+
+
+async def _send_poll(entity, card, schedule_dt, image_b64, fallback_text, is_quiz):
+    """
+    Send a Telegram poll/quiz. If image_b64 present, send card image first as a
+    separate scheduled message (1s before the poll), then the poll itself.
+
+    Card schema (poll):
+        question: str
+        options: [str | {text, correct?}]
+        multiple_choice: bool      (poll only; ignored for quiz)
+        solution: str              (quiz only; explanation shown after answer)
+        close_period_sec: int      (auto-close after N seconds; 0 = never)
+        anonymous: bool            (default true)
+    """
+    raw_options = card.get("options") or []
+    options_struct = []
+    correct_indices = []
+    for i, opt in enumerate(raw_options):
+        if isinstance(opt, str):
+            text = opt
+            correct = False
+        elif isinstance(opt, dict):
+            text = opt.get("text") or opt.get("pl") or ""
+            correct = bool(opt.get("correct"))
+        else:
+            continue
+        text = _truncate(text, POLL_OPTION_MAX)
+        if not text:
+            continue
+        if correct:
+            correct_indices.append(len(options_struct))
+        options_struct.append(text)
+        if len(options_struct) >= POLL_MAX_OPTIONS:
+            break
+
+    if len(options_struct) < 2:
+        raise ValueError("Polls need at least 2 options")
+    if is_quiz and len(correct_indices) != 1:
+        raise ValueError("Quiz needs exactly one correct answer")
+
+    question_text = _truncate(card.get("question") or card.get("word") or "", POLL_QUESTION_MAX)
+    if not question_text:
+        raise ValueError("Empty question")
+
+    answers = [
+        PollAnswer(
+            text=TextWithEntities(text=t, entities=[]),
+            option=bytes([i]),
+        )
+        for i, t in enumerate(options_struct)
+    ]
+
+    close_period = card.get("close_period_sec") or 0
+    multiple_choice = bool(card.get("multiple_choice")) and not is_quiz
+    anonymous = card.get("anonymous", True)
+
+    poll = Poll(
+        id=0,
+        question=TextWithEntities(text=question_text, entities=[]),
+        answers=answers,
+        hash=0,
+        public_voters=(not anonymous),
+        multiple_choice=multiple_choice,
+        quiz=is_quiz,
+        close_period=(close_period or None),
+    )
+
+    media_kwargs = {"poll": poll}
+    if is_quiz:
+        media_kwargs["correct_answers"] = [bytes([i]) for i in correct_indices]
+        sol = _truncate(card.get("solution") or "", POLL_SOLUTION_MAX)
+        if sol:
+            media_kwargs["solution"] = sol
+            media_kwargs["solution_entities"] = []
+    media = InputMediaPoll(**media_kwargs)
+
+    # If we have a card image, send it as a separate scheduled message first.
+    # Use the post_text as caption so the image carries context independently.
+    if image_b64:
+        try:
+            raw = image_b64.split(",", 1)[-1]
+            image_bytes = base64.b64decode(raw)
+            buf = BytesIO(image_bytes)
+            buf.name = "card.png"
+            img_kwargs = {"parse_mode": "html"}
+            if schedule_dt:
+                img_kwargs["schedule"] = schedule_dt
+            caption = (fallback_text or "").strip() or None
+            await client.send_file(entity, file=buf, caption=caption, **img_kwargs)
+        except Exception as e:
+            log.warning("Image-before-poll failed: %s", e)
+
+    poll_kwargs = {"file": media}
+    if schedule_dt:
+        poll_kwargs["schedule"] = schedule_dt
+    return await client.send_message(entity, **poll_kwargs)
+
+
 async def handle_schedule(request):
     data = await request.json()
     channel_key = data.get("channel", "debug")
@@ -352,9 +466,15 @@ async def handle_schedule(request):
             )
 
         image_b64 = card.get("image")
+        card_type = (card.get("type") or "card").lower()
 
         try:
-            if image_b64:
+            if card_type in ("quiz", "poll"):
+                msg = await _send_poll(
+                    entity, card, schedule_dt, image_b64, text,
+                    is_quiz=(card_type == "quiz"),
+                )
+            elif image_b64:
                 raw = image_b64.split(",", 1)[-1]
                 image_bytes = base64.b64decode(raw)
                 buf = BytesIO(image_bytes)

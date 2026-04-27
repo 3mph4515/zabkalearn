@@ -21,12 +21,12 @@
                 document.getElementById('transcription-group').style.display = currentTemplate === 'slowo' ? 'block' : 'none';
                 document.getElementById('translation-group').style.display = currentTemplate === 'slowo' ? 'block' : 'none';
                 document.getElementById('example-group').style.display = ['slowo', 'blad', 'podsluchano'].includes(currentTemplate) ? 'block' : 'none';
-                document.getElementById('quiz-options-group').style.display = currentTemplate === 'quiz' ? 'block' : 'none';
 
                 if (btn.dataset.badge !== undefined && currentTemplate !== 'custom') {
                     document.getElementById('badge-text').value = btn.dataset.badge;
                 }
 
+                if (typeof updatePollUIForTemplate === 'function') updatePollUIForTemplate();
                 drawCard();
             });
         });

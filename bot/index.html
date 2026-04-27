@@ -38,6 +38,10 @@
                     <span class="icon">❓</span>
                     <span class="name">Quiz</span>
                 </button>
+                <button class="template-btn" data-template="ankieta" data-badge="ANKIETA">
+                    <span class="icon">📊</span>
+                    <span class="name">Ankieta</span>
+                </button>
                 <button class="template-btn" data-template="blad" data-badge="BŁĄD DNIA">
                     <span class="icon">⚠️</span>
                     <span class="name">Błąd dnia</span>
@@ -120,8 +124,43 @@
             </div>
 
             <div class="form-group" id="quiz-options-group" style="display: none;">
-                <label>Варианты ответа</label>
-                <textarea id="quiz-options" rows="3" placeholder="Склеп&#10;Магазин&#10;Подвал"></textarea>
+                <label>
+                    Варианты ответа
+                    <span class="poll-hint" id="poll-mode-hint">⓵ выбери правильный</span>
+                </label>
+                <div id="poll-options-list"></div>
+                <button type="button" id="add-poll-option-btn" onclick="addPollOption()"
+                  style="margin-top:6px;padding:6px 10px;border:1px dashed #4CAF50;background:transparent;color:#2E7D32;border-radius:6px;cursor:pointer;font-size:.8rem;">
+                  + Добавить вариант
+                </button>
+
+                <div class="form-group" id="poll-solution-group" style="margin-top:10px;">
+                    <label>Объяснение (показывается после ответа)</label>
+                    <textarea id="poll-solution" rows="2" placeholder="«Sklep» = магазин (а не склеп!) 🐸" maxlength="200"></textarea>
+                </div>
+
+                <div class="poll-config-row">
+                    <label class="poll-toggle">
+                        <input type="checkbox" id="poll-as-tg" checked>
+                        <span>Отправить как Telegram-опрос/quiz</span>
+                    </label>
+                    <label class="poll-toggle" id="poll-multi-row" style="display:none;">
+                        <input type="checkbox" id="poll-multiple"> Множественный выбор
+                    </label>
+                    <label class="poll-toggle">
+                        <input type="checkbox" id="poll-anonymous" checked> Анонимный
+                    </label>
+                    <label class="poll-toggle">
+                        Закрыть через:
+                        <select id="poll-close-period">
+                            <option value="0">Никогда</option>
+                            <option value="3600">1 час</option>
+                            <option value="21600">6 часов</option>
+                            <option value="86400" selected>24 часа</option>
+                            <option value="604800">1 неделя</option>
+                        </select>
+                    </label>
+                </div>
             </div>
             </div>
 

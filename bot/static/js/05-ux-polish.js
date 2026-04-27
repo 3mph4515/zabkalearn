@@ -1,6 +1,145 @@
 // === 05-ux-polish.js ===
-// Char counters, keyboard shortcuts, focus polish, runtime UX helpers.
+// Char counters, keyboard shortcuts, focus polish, poll/quiz UI, runtime UX helpers.
 // Pure additive — no modification of state/draw pipelines.
+
+        // ═══════════ Poll / Quiz options ═══════════
+        let pollOptions = [
+            { text: '', correct: false },
+            { text: '', correct: false },
+        ];
+
+        function isPollTemplate() {
+            return typeof currentTemplate !== 'undefined' &&
+                (currentTemplate === 'quiz' || currentTemplate === 'ankieta');
+        }
+
+        function isQuizTemplate() {
+            return typeof currentTemplate !== 'undefined' && currentTemplate === 'quiz';
+        }
+
+        function renderPollOptions() {
+            const list = document.getElementById('poll-options-list');
+            if (!list) return;
+            list.innerHTML = '';
+            const isQuiz = isQuizTemplate();
+            const isMulti = !isQuiz && document.getElementById('poll-multiple')?.checked;
+            const inputType = isQuiz ? 'radio' : (isMulti ? 'checkbox' : 'hidden');
+
+            pollOptions.forEach((opt, idx) => {
+                const row = document.createElement('div');
+                row.className = 'poll-option' + (opt.correct ? ' correct' : '');
+                const checkboxHtml = (inputType === 'hidden')
+                    ? '<span style="width:18px;flex-shrink:0;color:#bbb;font-weight:600;text-align:center;">' + (idx + 1) + '</span>'
+                    : `<input type="${inputType}" name="poll-correct" data-idx="${idx}" ${opt.correct ? 'checked' : ''}>`;
+                row.innerHTML = `
+                    ${checkboxHtml}
+                    <input type="text" class="poll-option-text" data-idx="${idx}"
+                           value="${(opt.text || '').replace(/"/g, '&quot;')}"
+                           maxlength="100"
+                           placeholder="${isQuiz ? 'Вариант ' + (idx + 1) : 'Опция ' + (idx + 1)}">
+                    <button type="button" class="poll-option-remove" data-idx="${idx}" title="Удалить">×</button>
+                `;
+                list.appendChild(row);
+            });
+
+            // Wire events
+            list.querySelectorAll('.poll-option-text').forEach(inp => {
+                inp.addEventListener('input', e => {
+                    pollOptions[+e.target.dataset.idx].text = e.target.value;
+                });
+            });
+            list.querySelectorAll('input[name="poll-correct"]').forEach(inp => {
+                inp.addEventListener('change', e => {
+                    const i = +e.target.dataset.idx;
+                    if (isQuiz) {
+                        pollOptions.forEach((o, k) => o.correct = (k === i));
+                    } else {
+                        pollOptions[i].correct = e.target.checked;
+                    }
+                    renderPollOptions();
+                });
+            });
+            list.querySelectorAll('.poll-option-remove').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    const i = +e.target.dataset.idx;
+                    if (pollOptions.length <= 2) {
+                        if (typeof pubToast === 'function') pubToast('Минимум 2 варианта', 'er');
+                        return;
+                    }
+                    pollOptions.splice(i, 1);
+                    renderPollOptions();
+                });
+            });
+        }
+
+        function addPollOption() {
+            if (pollOptions.length >= 10) {
+                if (typeof pubToast === 'function') pubToast('Максимум 10 вариантов (Telegram limit)', 'er');
+                return;
+            }
+            pollOptions.push({ text: '', correct: false });
+            renderPollOptions();
+        }
+
+        function getPollPayload() {
+            // Returns null if not poll template
+            if (!isPollTemplate()) return null;
+            if (!document.getElementById('poll-as-tg')?.checked) return null;
+            const opts = pollOptions
+                .map(o => ({ text: (o.text || '').trim(), correct: !!o.correct }))
+                .filter(o => o.text);
+            if (opts.length < 2) return { error: 'Нужно минимум 2 варианта' };
+            const isQuiz = isQuizTemplate();
+            if (isQuiz) {
+                const correctCount = opts.filter(o => o.correct).length;
+                if (correctCount !== 1) return { error: 'Quiz: выбери ровно один правильный' };
+            }
+            const closePeriod = parseInt(document.getElementById('poll-close-period')?.value || '0', 10);
+            const multipleChoice = !isQuiz && !!document.getElementById('poll-multiple')?.checked;
+            const anonymous = !!document.getElementById('poll-anonymous')?.checked;
+            const solution = (document.getElementById('poll-solution')?.value || '').trim();
+            return {
+                type: isQuiz ? 'quiz' : 'poll',
+                question: (document.getElementById('main-word')?.value || '').trim(),
+                options: opts,
+                multiple_choice: multipleChoice,
+                anonymous,
+                close_period_sec: closePeriod,
+                solution: isQuiz ? solution : '',
+            };
+        }
+
+        function updatePollUIForTemplate() {
+            const isPoll = isPollTemplate();
+            const isQuiz = isQuizTemplate();
+            const grp = document.getElementById('quiz-options-group');
+            if (grp) grp.style.display = isPoll ? 'block' : 'none';
+            const solGrp = document.getElementById('poll-solution-group');
+            if (solGrp) solGrp.style.display = isQuiz ? 'block' : 'none';
+            const multiRow = document.getElementById('poll-multi-row');
+            if (multiRow) multiRow.style.display = (isPoll && !isQuiz) ? 'flex' : 'none';
+            const hint = document.getElementById('poll-mode-hint');
+            if (hint) {
+                hint.textContent = isQuiz ? '⓵ выбери правильный'
+                    : (document.getElementById('poll-multiple')?.checked ? '☑ можно несколько' : '');
+            }
+            if (isPoll) renderPollOptions();
+        }
+
+        // Wire multi-choice toggle to re-render
+        (function() {
+            const m = document.getElementById('poll-multiple');
+            if (m) m.addEventListener('change', () => {
+                renderPollOptions();
+                updatePollUIForTemplate();
+            });
+        })();
+
+        // Expose globally
+        window.addPollOption = addPollOption;
+        window.getPollPayload = getPollPayload;
+        window.updatePollUIForTemplate = updatePollUIForTemplate;
+        window.renderPollOptions = renderPollOptions;
 
         (function uxPolish() {
             // --- Char counters ---
@@ -28,11 +167,6 @@
                     c.classList.toggle('err', n > hard);
                 };
                 input.addEventListener('input', update);
-                input.addEventListener('focus', update);
-                input.addEventListener('blur', () => {
-                    // Hide when empty + unfocused for cleaner look
-                    if (!input.value) c.textContent = '';
-                });
                 update();
             }
 
@@ -87,6 +221,51 @@
                     }
                 }
             });
+
+            // --- Live word-history check (Słowo dnia) ---
+            const wordInput = document.getElementById('main-word');
+            if (wordInput) {
+                let badge = document.getElementById('word-dup-badge');
+                if (!badge) {
+                    badge = document.createElement('div');
+                    badge.id = 'word-dup-badge';
+                    badge.className = 'word-dup-badge';
+                    wordInput.parentElement.appendChild(badge);
+                }
+                let dupTimer = null;
+                let lastChecked = '';
+                const checkWord = async () => {
+                    if (typeof currentTemplate !== 'undefined' && currentTemplate !== 'slowo') {
+                        badge.style.display = 'none';
+                        return;
+                    }
+                    const w = (wordInput.value || '').trim().split('\n')[0].trim();
+                    if (!w || w.length < 2) { badge.style.display = 'none'; return; }
+                    if (w === lastChecked) return;
+                    lastChecked = w;
+                    const ch = (typeof pubChannel !== 'undefined') ? pubChannel : 'production';
+                    try {
+                        const r = await fetch('/api/check-word?word=' + encodeURIComponent(w) + '&channel=' + ch).then(r => r.json());
+                        if (r.ok && r.exists && r.matches && r.matches[0]) {
+                            const m = r.matches[0];
+                            badge.innerHTML = '⚠️ Уже было: <b>' + (m.word || w) + '</b> · ' + (m.date || '').slice(0, 10);
+                            badge.style.display = 'block';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    } catch (_) { /* silent */ }
+                };
+                wordInput.addEventListener('input', () => {
+                    clearTimeout(dupTimer);
+                    dupTimer = setTimeout(checkWord, 600);
+                });
+                // Re-check on channel toggle
+                document.querySelectorAll('#pubChTog button').forEach(b => {
+                    b.addEventListener('click', () => { lastChecked = ''; checkWord(); });
+                });
+                // Initial check
+                setTimeout(checkWord, 800);
+            }
 
             // --- Run init when DOM ready (we're already at body end) ---
             initCounters();

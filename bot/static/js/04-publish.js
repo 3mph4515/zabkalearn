@@ -39,6 +39,8 @@
                     document.querySelectorAll('#pubChTog button').forEach(x => x.classList.remove('on'));
                     b.classList.add('on');
                     pubChannel = b.dataset.ch;
+                    document.body.classList.toggle('prod-active', pubChannel === 'production');
+                    if (typeof loadScheduledEditor === 'function') loadScheduledEditor();
                 });
             });
 
@@ -180,6 +182,13 @@
                 if (!scheduleTime) { pubToast('\u0412\u044B\u0431\u0435\u0440\u0438 \u0434\u0430\u0442\u0443', 'er'); return; }
             }
 
+            // Production guard: extra confirmation
+            if (pubChannel === 'production') {
+                const action = scheduleTime ? '\u043E\u0442\u043B\u043E\u0436\u0438\u0442\u044C' : '\u043E\u043F\u0443\u0431\u043B\u0438\u043A\u043E\u0432\u0430\u0442\u044C \u0421\u0420\u0410\u0417\u0423';
+                const ok = confirm('\u26A0\uFE0F PRODUCTION CHANNEL\n\n\u0422\u044B \u0441\u043E\u0431\u0438\u0440\u0430\u0435\u0448\u044C\u0441\u044F ' + action + ' \u043F\u043E\u0441\u0442 \u0432 @zabka_learn (\u0436\u0438\u0432\u043E\u0439 \u043A\u0430\u043D\u0430\u043B).\n\n\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?');
+                if (!ok) return;
+            }
+
             const word = (document.getElementById('main-word').value || '').trim();
 
             // Duplicate check (Słowo dnia template only)
@@ -205,17 +214,30 @@
             btn.textContent = '\u041E\u0442\u043F\u0440\u0430\u0432\u043A\u0430...';
 
             try {
+                let cardPayload = {
+                    word,
+                    translation: document.getElementById('translation').value || '',
+                    transcription: document.getElementById('transcription').value || '',
+                    examples: (typeof getExamples === 'function') ? getExamples() : [],
+                    post_text: text,
+                    schedule_time: scheduleTime || new Date().toISOString().slice(0, 16),
+                    image: imageData,
+                };
+                // Poll/quiz override
+                if (typeof getPollPayload === 'function') {
+                    const poll = getPollPayload();
+                    if (poll && poll.error) {
+                        pubToast(poll.error, 'er');
+                        btn.disabled = false; btn.textContent = origText;
+                        return;
+                    }
+                    if (poll) {
+                        Object.assign(cardPayload, poll);
+                    }
+                }
                 const payload = {
                     channel: pubChannel,
-                    cards: [{
-                        word,
-                        translation: document.getElementById('translation').value || '',
-                        transcription: document.getElementById('transcription').value || '',
-                        examples: (typeof getExamples === 'function') ? getExamples() : [],
-                        post_text: text,
-                        schedule_time: scheduleTime || new Date().toISOString().slice(0, 16),
-                        image: imageData,
-                    }],
+                    cards: [cardPayload],
                 };
 
                 if (!scheduleTime) {
@@ -574,15 +596,25 @@
                     const examples = (typeof getExamples === 'function') ? getExamples() : card.examples;
                     const post_text = document.getElementById('pubText')?.value.trim() || '';
 
+                    let qCard = {
+                        word, translation, transcription, examples,
+                        post_text,
+                        schedule_time: dateToWarsawIso(date),
+                        image: imageData,
+                    };
+                    if (typeof getPollPayload === 'function') {
+                        const poll = getPollPayload();
+                        if (poll && poll.error) {
+                            pubToast(poll.error, 'er');
+                            btn.disabled = false; btn.textContent = 'В отложку → след.';
+                            return;
+                        }
+                        if (poll) Object.assign(qCard, poll);
+                    }
                     const payload = {
                         channel: queueState.channel,
                         publish_now: false,
-                        cards: [{
-                            word, translation, transcription, examples,
-                            post_text,
-                            schedule_time: dateToWarsawIso(date),
-                            image: imageData,
-                        }],
+                        cards: [qCard],
                     };
                     const r = await fetch('/api/schedule', {
                         method: 'POST',
