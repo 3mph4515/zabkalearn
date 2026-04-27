@@ -887,20 +887,55 @@ async def editor_command(update, context):
     )
 
 
+def build_standalone_editor_html():
+    """Inline split CSS/JS modules into the index.html shell so the file
+    works standalone when downloaded (no server-relative /static fetches)."""
+    base = os.path.dirname(__file__)
+    static_dir = os.path.join(base, "static")
+    with open(EDITOR_FILE, "r", encoding="utf-8") as f:
+        html = f.read()
+
+    css_link = '<link rel="stylesheet" href="/static/css/editor.css">'
+    if css_link in html:
+        with open(os.path.join(static_dir, "css", "editor.css"), "r", encoding="utf-8") as f:
+            css = f.read()
+        html = html.replace(css_link, f"<style>\n{css}\n</style>")
+
+    import re as _re
+    js_files = sorted(os.listdir(os.path.join(static_dir, "js")))
+    inline_scripts = []
+    for name in js_files:
+        if not name.endswith(".js"):
+            continue
+        with open(os.path.join(static_dir, "js", name), "r", encoding="utf-8") as f:
+            inline_scripts.append(f"<script>\n// === inlined: {name} ===\n{f.read()}\n</script>")
+    inlined_block = "\n".join(inline_scripts)
+    replacement = "\n    " + inlined_block
+    html = _re.sub(
+        r'(?:\s*<script src="/static/js/[^"]+"></script>)+',
+        lambda _m: replacement,
+        html,
+    )
+    return html
+
+
 async def send_editor_file(message, user_id):
-    """Send editor file to user"""
+    """Send editor file to user (inlined to single self-contained HTML)."""
     try:
-        with open(EDITOR_FILE, "rb") as f:
-            await message.reply_document(
-                document=f,
-                filename=f"polski-daily-card-generator-v{EDITOR_VERSION}.html",
-                caption=(
-                    f"🐸 **Polski Daily Card Generator v{EDITOR_VERSION}**\n\n"
-                    f"📅 Дата: {datetime.now(pytz.timezone('Europe/Warsaw')).strftime('%d.%m.%Y %H:%M')} (Warszawa)\n\n"
-                    "Открой файл в браузере и создавай карточки!"
-                ),
-                parse_mode="Markdown"
-            )
+        html = build_standalone_editor_html()
+        from io import BytesIO
+        buf = BytesIO(html.encode("utf-8"))
+        buf.name = f"polski-daily-card-generator-v{EDITOR_VERSION}.html"
+        await message.reply_document(
+            document=buf,
+            filename=buf.name,
+            caption=(
+                f"🐸 **Polski Daily Card Generator v{EDITOR_VERSION}**\n\n"
+                f"📅 Дата: {datetime.now(pytz.timezone('Europe/Warsaw')).strftime('%d.%m.%Y %H:%M')} (Warszawa)\n\n"
+                "Открой файл в браузере и создавай карточки!"
+            ),
+            parse_mode="Markdown"
+        )
     except FileNotFoundError:
         await message.reply_text("❌ Файл редактора не найден.")
 

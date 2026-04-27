@@ -518,6 +518,7 @@ async def start_app():
     app.router.add_post("/api/reschedule", handle_reschedule)
     app.router.add_get("/api/word-history", handle_word_history)
     app.router.add_get("/api/check-word", handle_check_word)
+    app.router.add_static("/static", os.path.join(BASE_DIR, "static"), show_index=False)
 
     runner = web.AppRunner(app)
     await runner.setup()
