@@ -142,7 +142,15 @@
             const examples = (typeof getExamples === 'function') ? getExamples() : [document.getElementById('example').value.trim()].filter(Boolean);
             const example = examples[0] || '';
             const badgeColor = document.getElementById('badge-color').value;
-            const quizOptions = document.getElementById('quiz-options').value.split('\n').filter(o => o.trim());
+            const quizOptionsEl = document.getElementById('quiz-options');
+            // Legacy textarea removed in poll/quiz refactor — fall back to dynamic poll-options-list inputs.
+            let quizOptions = [];
+            if (quizOptionsEl) {
+                quizOptions = quizOptionsEl.value.split('\n').filter(o => o.trim());
+            } else {
+                quizOptions = Array.from(document.querySelectorAll('#poll-options-list .poll-option-text'))
+                    .map(i => (i.value || '').trim()).filter(Boolean);
+            }
 
             // Spacing values from sliders
             const cardPaddingVal = parseInt(document.getElementById('card-padding').value) * scale;
