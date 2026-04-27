@@ -902,15 +902,17 @@ def build_standalone_editor_html():
         html = html.replace(css_link, f"<style>\n{css}\n</style>")
 
     import re as _re
-    js_files = sorted(os.listdir(os.path.join(static_dir, "js")))
-    inline_scripts = []
+    js_files = sorted(
+        f for f in os.listdir(os.path.join(static_dir, "js"))
+        if f.endswith(".js")
+    )
+    chunks = []
     for name in js_files:
-        if not name.endswith(".js"):
-            continue
         with open(os.path.join(static_dir, "js", name), "r", encoding="utf-8") as f:
-            inline_scripts.append(f"<script>\n// === inlined: {name} ===\n{f.read()}\n</script>")
-    inlined_block = "\n".join(inline_scripts)
-    replacement = "\n    " + inlined_block
+            chunks.append(f"// === inlined: {name} ===\n{f.read()}")
+    # Single <script> tag so top-level const/let bindings are shared across modules.
+    bundled = "<script>\n" + "\n".join(chunks) + "\n</script>"
+    replacement = "\n    " + bundled
     html = _re.sub(
         r'(?:\s*<script src="/static/js/[^"]+"></script>)+',
         lambda _m: replacement,

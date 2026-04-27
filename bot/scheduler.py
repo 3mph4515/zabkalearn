@@ -360,6 +360,33 @@ async def handle_editor(request):
         return web.Response(text=f.read(), content_type="text/html", charset="utf-8")
 
 
+_EDITOR_BUNDLE_CACHE = {"mtime": 0, "body": ""}
+
+
+async def handle_editor_js_bundle(request):
+    """Concatenate all editor JS modules into a single response.
+    Avoids the const/let-script-scoping issue across multiple <script> tags."""
+    js_dir = os.path.join(BASE_DIR, "static", "js")
+    files = sorted(f for f in os.listdir(js_dir) if f.endswith(".js"))
+    paths = [os.path.join(js_dir, f) for f in files]
+    latest_mtime = max(os.path.getmtime(p) for p in paths) if paths else 0
+
+    cache = _EDITOR_BUNDLE_CACHE
+    if cache["mtime"] != latest_mtime:
+        chunks = []
+        for f, p in zip(files, paths):
+            with open(p, "r", encoding="utf-8") as fh:
+                chunks.append(f"// === bundled: {f} ===\n{fh.read()}")
+        cache["body"] = "\n".join(chunks)
+        cache["mtime"] = latest_mtime
+
+    return web.Response(
+        text=cache["body"],
+        content_type="application/javascript",
+        charset="utf-8",
+    )
+
+
 POLL_QUESTION_MAX = 300
 POLL_OPTION_MAX = 100
 POLL_MAX_OPTIONS = 10
@@ -709,6 +736,7 @@ async def start_app():
     app.router.add_post("/api/reschedule", handle_reschedule)
     app.router.add_get("/api/word-history", handle_word_history)
     app.router.add_get("/api/check-word", handle_check_word)
+    app.router.add_get("/static/js/editor-bundle.js", handle_editor_js_bundle)
     app.router.add_static("/static", os.path.join(BASE_DIR, "static"), show_index=False)
 
     runner = web.AppRunner(app)
