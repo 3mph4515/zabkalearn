@@ -26,12 +26,60 @@ from telethon.tl.functions.messages import (
     GetScheduledHistoryRequest,
     DeleteScheduledMessagesRequest,
 )
+import struct as _struct
 from telethon.tl.types import (
     InputMediaPoll,
     Poll,
     PollAnswer,
     TextWithEntities,
 )
+
+
+def _patch_input_media_poll():
+    """Telethon 1.43.x serializes InputMediaPoll.correct_answers as Vector<int>,
+    but Telegram MTProto expects Vector<bytes>. Override _bytes to emit bytes."""
+    def _bytes(self):
+        # solution + solution_entities share flag bit 1 (value=2 in mask).
+        # Both must be set together (entities can be empty list, but not None/False).
+        has_solution = self.solution is not None and self.solution is not False
+        has_correct = self.correct_answers is not None and self.correct_answers is not False
+        has_attached = self.attached_media is not None and self.attached_media is not False
+        has_solmedia = self.solution_media is not None and self.solution_media is not False
+
+        flags = (
+            (1 if has_correct else 0) |
+            (8 if has_attached else 0) |
+            (2 if has_solution else 0) |
+            (4 if has_solmedia else 0)
+        )
+        parts = [
+            b'\x08A:\x88',
+            _struct.pack('<I', flags),
+            self.poll._bytes(),
+        ]
+        if has_correct:
+            parts.append(b'\x15\xc4\xb5\x1c')
+            parts.append(_struct.pack('<i', len(self.correct_answers)))
+            for x in self.correct_answers:
+                if isinstance(x, int):
+                    x = bytes([x])
+                parts.append(self.serialize_bytes(x))
+        if has_attached:
+            parts.append(self.attached_media._bytes())
+        if has_solution:
+            parts.append(self.serialize_bytes(self.solution))
+            ents = self.solution_entities or []
+            parts.append(b'\x15\xc4\xb5\x1c')
+            parts.append(_struct.pack('<i', len(ents)))
+            for ent in ents:
+                parts.append(ent._bytes())
+        if has_solmedia:
+            parts.append(self.solution_media._bytes())
+        return b''.join(parts)
+    InputMediaPoll._bytes = _bytes
+
+
+_patch_input_media_poll()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
@@ -378,6 +426,19 @@ async def _send_poll(entity, card, schedule_dt, image_b64, fallback_text, is_qui
     multiple_choice = bool(card.get("multiple_choice")) and not is_quiz
     anonymous = card.get("anonymous", True)
 
+    # Telethon 1.43.x has a schema mismatch with current Telegram for quiz polls:
+    # correct_answers is rejected as not matching PollAnswer.option even though
+    # bytes are identical. Fallback: send as plain opinion poll and prepend the
+    # correct answer to the solution/follow-up message.
+    sol_text = _truncate(card.get("solution") or "", POLL_SOLUTION_MAX)
+    if is_quiz:
+        correct_label = options_struct[correct_indices[0]] if correct_indices else ""
+        sol_text = f"✅ Правильный ответ: {correct_label}" + (f"\n\n{sol_text}" if sol_text else "")
+        # downgrade to plain poll for compatibility
+        is_quiz_effective = False
+    else:
+        is_quiz_effective = False
+
     poll = Poll(
         id=0,
         question=TextWithEntities(text=question_text, entities=[]),
@@ -385,18 +446,11 @@ async def _send_poll(entity, card, schedule_dt, image_b64, fallback_text, is_qui
         hash=0,
         public_voters=(not anonymous),
         multiple_choice=multiple_choice,
-        quiz=is_quiz,
+        quiz=is_quiz_effective,
         close_period=(close_period or None),
     )
 
-    media_kwargs = {"poll": poll}
-    if is_quiz:
-        media_kwargs["correct_answers"] = [bytes([i]) for i in correct_indices]
-        sol = _truncate(card.get("solution") or "", POLL_SOLUTION_MAX)
-        if sol:
-            media_kwargs["solution"] = sol
-            media_kwargs["solution_entities"] = []
-    media = InputMediaPoll(**media_kwargs)
+    media = InputMediaPoll(poll=poll)
 
     # If we have a card image, send it as a separate scheduled message first.
     # Use the post_text as caption so the image carries context independently.
@@ -417,7 +471,24 @@ async def _send_poll(entity, card, schedule_dt, image_b64, fallback_text, is_qui
     poll_kwargs = {"file": media}
     if schedule_dt:
         poll_kwargs["schedule"] = schedule_dt
-    return await client.send_message(entity, **poll_kwargs)
+    msg = await client.send_message(entity, **poll_kwargs)
+
+    # If we have a quiz solution, send it as a follow-up message scheduled
+    # at close time (or immediately for instant publishes). Hidden behind a
+    # spoiler so people who haven't voted yet aren't spoiled.
+    if is_quiz and sol_text:
+        try:
+            spoiler_text = f"<tg-spoiler>{sol_text}</tg-spoiler>"
+            kw = {"parse_mode": "html"}
+            if schedule_dt:
+                # Schedule reveal slightly after the poll
+                from datetime import timedelta
+                kw["schedule"] = schedule_dt + timedelta(seconds=10)
+            await client.send_message(entity, spoiler_text, reply_to=msg.id, **kw)
+        except Exception as e:
+            log.warning("Quiz solution follow-up failed: %s", e)
+
+    return msg
 
 
 async def handle_schedule(request):
