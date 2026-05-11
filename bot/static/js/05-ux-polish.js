@@ -291,7 +291,49 @@
             });
         })();
 
+        async function ttsTestAll() {
+            const btn = document.getElementById('ttsTestAllBtn');
+            const hint = document.getElementById('ttsHint');
+            const text = (document.getElementById('ttsText')?.value || '').trim() || ttsBuildAutoText();
+            if (!text) { hint.textContent = 'Пусто'; return; }
+            const ch = (typeof pubChannel !== 'undefined') ? pubChannel : 'debug';
+            const warn = ch === 'production'
+                ? '⚠️ PRODUCTION КАНАЛ @zabka_learn!\n\n'
+                : '';
+            const ok = confirm(warn +
+                'Отправить ' + text.length + ' символов всеми голосами (10 шт) в канал ' + ch + '?\n\n' +
+                'ElevenLabs free = 10K chars/мес. Сейчас сожжёшь ~' + (text.length * 7) + ' chars.');
+            if (!ok) return;
+            btn.disabled = true; btn.textContent = '⏳ синтез…';
+            hint.textContent = '';
+            try {
+                const r = await fetch('/api/tts-test-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, channel: ch }),
+                });
+                const j = await r.json();
+                if (!j.ok) {
+                    hint.textContent = '✗ ' + (j.error || r.status);
+                    return;
+                }
+                const okCount = j.results.filter(x => x.ok).length;
+                const failed = j.results.filter(x => !x.ok);
+                hint.textContent = '✓ ' + okCount + '/' + j.count + ' отправлено';
+                if (failed.length) {
+                    console.warn('[tts-test] failures:', failed);
+                }
+                if (typeof pubToast === 'function') pubToast('🧪 Тест: ' + okCount + '/' + j.count + ' голосов отправлено в TG', 'ok');
+            } catch (e) {
+                hint.textContent = '✗ ' + e.message;
+                console.error('[tts-test] failed:', e);
+            } finally {
+                btn.disabled = false; btn.textContent = '🧪 Все голоса → TG';
+            }
+        }
+
         window.ttsPreview = ttsPreview;
+        window.ttsTestAll = ttsTestAll;
         window.getTtsPayload = getTtsPayload;
 
         (function uxPolish() {

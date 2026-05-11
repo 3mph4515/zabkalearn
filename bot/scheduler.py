@@ -838,6 +838,82 @@ async def handle_tts_preview(request):
     return web.Response(body=audio, content_type=ctype)
 
 
+# All voices to use in bulk-test endpoint (provider, voice_id, human label)
+TTS_TEST_VOICES = [
+    ("elevenlabs", "pFZP5JQG7iQjIQuC4Bku", "EL · Lily (Ж)"),
+    ("elevenlabs", "XB0fDUnXU5powFXDhCwa", "EL · Charlotte (Ж)"),
+    ("elevenlabs", "EXAVITQu4vr4xnSDxMaL", "EL · Bella (Ж)"),
+    ("elevenlabs", "21m00Tcm4TlvDq8ikWAM", "EL · Rachel (Ж)"),
+    ("elevenlabs", "onwK4e9ZLuTAKqWW03F9", "EL · Daniel (М)"),
+    ("elevenlabs", "IKne3meq5aSn9XLyUdCD", "EL · Charlie (М)"),
+    ("elevenlabs", "ErXwobaYiN019PkySvjV", "EL · Antoni (М)"),
+    ("azure", "pl-PL-AgnieszkaNeural", "Azure · Agnieszka (Ж)"),
+    ("azure", "pl-PL-ZofiaNeural", "Azure · Zofia (Ж)"),
+    ("azure", "pl-PL-MarekNeural", "Azure · Marek (М)"),
+]
+
+
+async def handle_tts_test_all(request):
+    """Synthesize the same text with every supported voice and send as voice notes
+    to the chosen channel, each prefixed by a label message so user can A/B compare.
+    """
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"ok": False, "error": "Bad JSON"}, status=400)
+    text = (data.get("text") or "").strip()
+    if not text:
+        return web.json_response({"ok": False, "error": "Empty text"}, status=400)
+    channel_key = data.get("channel", "debug")
+    channel_id = CHANNELS.get(channel_key)
+    if not channel_id:
+        return web.json_response({"ok": False, "error": "Unknown channel"}, status=400)
+
+    entity = await client.get_entity(channel_id)
+
+    # Header message so the burst is visually grouped in chat
+    try:
+        header = await client.send_message(
+            entity,
+            f"🧪 <b>TTS-тест</b>\n<code>{_escape_ssml(text)[:200]}</code>",
+            parse_mode="html",
+        )
+        header_id = header.id
+    except Exception as e:
+        log.warning("TTS test header send failed: %s", e)
+        header_id = None
+
+    results = []
+    for provider, voice_id, label in TTS_TEST_VOICES:
+        if provider == "elevenlabs" and not ELEVEN_API_KEY:
+            results.append({"label": label, "ok": False, "error": "no ELEVEN_API_KEY"})
+            continue
+        if provider == "azure" and not AZURE_SPEECH_KEY:
+            results.append({"label": label, "ok": False, "error": "no AZURE_SPEECH_KEY"})
+            continue
+        try:
+            audio = await _dispatch_synth(provider, text, voice=voice_id, rate_pct=0, fmt="ogg")
+            if not audio:
+                results.append({"label": label, "ok": False, "error": "synth failed"})
+                continue
+            # Label first, then voice note as reply
+            try:
+                lbl_msg = await client.send_message(entity, f"▶ {label}", reply_to=header_id)
+                reply_to = lbl_msg.id
+            except Exception:
+                reply_to = header_id
+            buf = BytesIO(audio)
+            buf.name = "voice.ogg"
+            await client.send_file(entity, file=buf, voice_note=True, reply_to=reply_to)
+            results.append({"label": label, "ok": True})
+        except Exception as e:
+            log.warning("TTS test '%s' failed: %s", label, e)
+            results.append({"label": label, "ok": False, "error": str(e)})
+        await asyncio.sleep(0.4)  # avoid Telegram flood
+
+    return web.json_response({"ok": True, "results": results, "count": len(results)})
+
+
 async def handle_scheduled_list(request):
     channel_key = request.query.get("channel", "debug")
     channel_id = CHANNELS.get(channel_key)
@@ -962,6 +1038,7 @@ async def start_app():
     app.router.add_get("/api/word-history", handle_word_history)
     app.router.add_get("/api/check-word", handle_check_word)
     app.router.add_post("/api/tts-preview", handle_tts_preview)
+    app.router.add_post("/api/tts-test-all", handle_tts_test_all)
     app.router.add_get("/static/js/editor-bundle.js", handle_editor_js_bundle)
     app.router.add_static("/static", os.path.join(BASE_DIR, "static"), show_index=False)
 
