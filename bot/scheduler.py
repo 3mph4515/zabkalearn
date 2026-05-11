@@ -20,6 +20,7 @@ from datetime import datetime
 from io import BytesIO
 
 import pytz
+import aiohttp
 from aiohttp import web
 from telethon import TelegramClient
 from telethon.tl.functions.messages import (
@@ -92,6 +93,10 @@ API_HASH = os.environ["TG_API_HASH"]
 SESSION_PATH = os.path.join(BASE_DIR, "zabka_session")
 
 AUTH_TOKEN = os.environ["SCHEDULER_TOKEN"]
+
+AZURE_SPEECH_KEY = os.environ.get("AZURE_SPEECH_KEY", "")
+AZURE_SPEECH_REGION = os.environ.get("AZURE_SPEECH_REGION", "westeurope")
+AZURE_TTS_DEFAULT_VOICE = "pl-PL-AgnieszkaNeural"
 
 CHANNELS = {
     "debug": -1003772746301,
@@ -518,6 +523,101 @@ async def _send_poll(entity, card, schedule_dt, image_b64, fallback_text, is_qui
     return msg
 
 
+# ═══════════ TTS (Azure Speech) ═══════════
+
+TTS_MAX_INPUT_CHARS = 1500  # safety cap; F0 also caps overall monthly chars
+
+def _escape_ssml(text: str) -> str:
+    return (
+        text.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+    )
+
+def _build_tts_text(card: dict) -> str:
+    """Build natural-spoken sequence: word, pause, examples (Polish only)."""
+    parts: list[str] = []
+    word = (card.get("word") or "").strip()
+    if word:
+        # Use only first line of word field
+        parts.append(word.split("\n")[0].strip())
+    for ex in card.get("examples", []) or []:
+        if isinstance(ex, str):
+            s = ex.strip().split("\n")[0].strip()
+        elif isinstance(ex, dict):
+            s = (ex.get("pl") or ex.get("text") or "").strip().split("\n")[0].strip()
+        else:
+            s = ""
+        if s:
+            parts.append(s)
+    return ". ".join(parts)[:TTS_MAX_INPUT_CHARS]
+
+def _build_ssml(text: str, voice: str = AZURE_TTS_DEFAULT_VOICE, rate_pct: int = -10) -> str:
+    safe = _escape_ssml(text)
+    rate = f"{rate_pct:+d}%"
+    return (
+        '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="pl-PL">'
+        f'<voice name="{voice}">'
+        f'<prosody rate="{rate}">{safe}</prosody>'
+        '</voice></speak>'
+    )
+
+async def _synth_voice_ogg(text: str, voice: str = AZURE_TTS_DEFAULT_VOICE, rate_pct: int = -10) -> bytes | None:
+    """Returns OGG/Opus bytes suitable for Telegram voice notes, or None on failure."""
+    if not AZURE_SPEECH_KEY or not text.strip():
+        return None
+    url = f"https://{AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1"
+    headers = {
+        "Ocp-Apim-Subscription-Key": AZURE_SPEECH_KEY,
+        "Content-Type": "application/ssml+xml",
+        "X-Microsoft-OutputFormat": "ogg-48khz-16bit-mono-opus",
+        "User-Agent": "zabka-learn",
+    }
+    ssml = _build_ssml(text, voice=voice, rate_pct=rate_pct)
+    try:
+        timeout = aiohttp.ClientTimeout(total=20)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(url, data=ssml.encode("utf-8"), headers=headers) as resp:
+                if resp.status != 200:
+                    body = await resp.text()
+                    log.warning("Azure TTS HTTP %d: %s", resp.status, body[:200])
+                    return None
+                return await resp.read()
+    except Exception as e:
+        log.warning("Azure TTS request failed: %s", e)
+        return None
+
+
+async def _maybe_send_voice_reply(entity, card: dict, reply_to_msg_id: int, schedule_dt):
+    """If card.tts_enabled, synthesize Polish voice note and send as reply."""
+    if not card.get("tts_enabled"):
+        return
+    text = (card.get("tts_text") or "").strip() or _build_tts_text(card)
+    if not text:
+        return
+    voice = card.get("tts_voice") or AZURE_TTS_DEFAULT_VOICE
+    try:
+        rate_pct = int(card.get("tts_rate_pct", -10))
+    except (TypeError, ValueError):
+        rate_pct = -10
+    audio = await _synth_voice_ogg(text, voice=voice, rate_pct=rate_pct)
+    if not audio:
+        log.info("TTS skipped (no audio) for '%s'", card.get("word", ""))
+        return
+    buf = BytesIO(audio)
+    buf.name = "voice.ogg"
+    kwargs = dict(file=buf, voice_note=True, reply_to=reply_to_msg_id)
+    if schedule_dt:
+        from datetime import timedelta
+        kwargs["schedule"] = schedule_dt + timedelta(seconds=5)
+    try:
+        await client.send_file(entity, **kwargs)
+        log.info("TTS voice sent for '%s' (%d chars)", card.get("word", ""), len(text))
+    except Exception as e:
+        log.warning("TTS send_file failed: %s", e)
+
+
 async def handle_schedule(request):
     data = await request.json()
     channel_key = data.get("channel", "debug")
@@ -592,6 +692,9 @@ async def handle_schedule(request):
             results.append({"id": msg.id, "word": word, "date": date_str, "ok": True})
             log.info("Published '%s' %s (msg_id=%d)", word, date_str, msg.id)
 
+            # Optional voice-note follow-up (Azure TTS)
+            await _maybe_send_voice_reply(entity, card, msg.id, schedule_dt)
+
             # Append to local word history immediately so duplicate-check stays fresh.
             if word:
                 hist = load_word_history()
@@ -611,6 +714,28 @@ async def handle_schedule(request):
         await asyncio.sleep(0.3)
 
     return web.json_response({"ok": True, "results": results})
+
+
+async def handle_tts_preview(request):
+    """Synthesize voice for given text and return OGG/Opus bytes. Used by editor for preview."""
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"ok": False, "error": "Bad JSON"}, status=400)
+    text = (data.get("text") or "").strip()
+    if not text:
+        return web.json_response({"ok": False, "error": "Empty text"}, status=400)
+    voice = data.get("voice") or AZURE_TTS_DEFAULT_VOICE
+    try:
+        rate_pct = int(data.get("rate_pct", -10))
+    except (TypeError, ValueError):
+        rate_pct = -10
+    if not AZURE_SPEECH_KEY:
+        return web.json_response({"ok": False, "error": "AZURE_SPEECH_KEY not configured"}, status=500)
+    audio = await _synth_voice_ogg(text, voice=voice, rate_pct=rate_pct)
+    if not audio:
+        return web.json_response({"ok": False, "error": "Synthesis failed"}, status=502)
+    return web.Response(body=audio, content_type="audio/ogg")
 
 
 async def handle_scheduled_list(request):
@@ -736,6 +861,7 @@ async def start_app():
     app.router.add_post("/api/reschedule", handle_reschedule)
     app.router.add_get("/api/word-history", handle_word_history)
     app.router.add_get("/api/check-word", handle_check_word)
+    app.router.add_post("/api/tts-preview", handle_tts_preview)
     app.router.add_get("/static/js/editor-bundle.js", handle_editor_js_bundle)
     app.router.add_static("/static", os.path.join(BASE_DIR, "static"), show_index=False)
 

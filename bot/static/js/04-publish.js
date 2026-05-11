@@ -235,6 +235,11 @@
                         Object.assign(cardPayload, poll);
                     }
                 }
+                // TTS payload
+                if (typeof getTtsPayload === 'function') {
+                    const tts = getTtsPayload();
+                    if (tts) Object.assign(cardPayload, tts);
+                }
                 const payload = {
                     channel: pubChannel,
                     cards: [cardPayload],
@@ -616,6 +621,10 @@
                             return;
                         }
                         if (poll) Object.assign(qCard, poll);
+                    }
+                    if (typeof getTtsPayload === 'function') {
+                        const tts = getTtsPayload();
+                        if (tts) Object.assign(qCard, tts);
                     }
                     const payload = {
                         channel: queueState.channel,

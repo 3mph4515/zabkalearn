@@ -443,6 +443,38 @@
                     <input type="checkbox" id="pubWithSub" checked style="width:14px;height:14px;">
                     Подпись канала
                 </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;">
+                    <input type="checkbox" id="pubWithTts" style="width:14px;height:14px;">
+                    🔊 Озвучить (TTS pl-PL)
+                </label>
+            </div>
+
+            <div id="ttsPanel" style="display:none;background:#f5f5f5;border-radius:7px;padding:8px;margin-bottom:8px;font-size:.75rem;">
+                <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+                    <label style="flex:1;">Голос:
+                        <select id="ttsVoice" style="width:100%;padding:3px;border:1px solid #ddd;border-radius:5px;font-size:.72rem;">
+                            <option value="pl-PL-AgnieszkaNeural">Agnieszka (Ж, ⭐)</option>
+                            <option value="pl-PL-ZofiaNeural">Zofia (Ж)</option>
+                            <option value="pl-PL-MarekNeural">Marek (М)</option>
+                        </select>
+                    </label>
+                    <label style="width:90px;">Темп:
+                        <select id="ttsRate" style="width:100%;padding:3px;border:1px solid #ddd;border-radius:5px;font-size:.72rem;">
+                            <option value="-25">-25%</option>
+                            <option value="-10" selected>-10%</option>
+                            <option value="0">норм</option>
+                            <option value="10">+10%</option>
+                        </select>
+                    </label>
+                </div>
+                <textarea id="ttsText" rows="2" placeholder="Авто: word + примеры. Можно переопределить."
+                          style="width:100%;padding:5px;border:1px solid #ddd;border-radius:5px;font-size:.72rem;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+                <div style="display:flex;gap:5px;margin-top:5px;align-items:center;">
+                    <button type="button" onclick="ttsPreview()" id="ttsPreviewBtn"
+                            style="padding:4px 10px;border:1px solid #4CAF50;background:#fff;color:#2E7D32;border-radius:5px;cursor:pointer;font-size:.72rem;font-weight:600;">▶ Preview</button>
+                    <audio id="ttsAudio" controls style="height:28px;flex:1;display:none;"></audio>
+                    <span id="ttsHint" style="font-size:.7rem;color:#666;"></span>
+                </div>
             </div>
 
             <button class="pub-btn now" id="pubBtn" onclick="publishPost()" disabled>

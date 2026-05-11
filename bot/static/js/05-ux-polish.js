@@ -141,6 +141,80 @@
         window.updatePollUIForTemplate = updatePollUIForTemplate;
         window.renderPollOptions = renderPollOptions;
 
+        // ═══════════ TTS (Azure Speech preview + payload) ═══════════
+        function ttsBuildAutoText() {
+            const word = (document.getElementById('main-word')?.value || '').split('\n')[0].trim();
+            const exEls = document.querySelectorAll('.example-input');
+            const parts = [];
+            if (word) parts.push(word);
+            exEls.forEach(el => {
+                const t = (el.value || '').split('\n')[0].trim();
+                if (t) parts.push(t);
+            });
+            return parts.join('. ');
+        }
+
+        function getTtsPayload() {
+            if (!document.getElementById('pubWithTts')?.checked) return null;
+            const txt = (document.getElementById('ttsText')?.value || '').trim() || ttsBuildAutoText();
+            if (!txt) return null;
+            const voice = document.getElementById('ttsVoice')?.value || 'pl-PL-AgnieszkaNeural';
+            const rate = parseInt(document.getElementById('ttsRate')?.value || '-10', 10);
+            return { tts_enabled: true, tts_text: txt, tts_voice: voice, tts_rate_pct: rate };
+        }
+
+        async function ttsPreview() {
+            const btn = document.getElementById('ttsPreviewBtn');
+            const hint = document.getElementById('ttsHint');
+            const audio = document.getElementById('ttsAudio');
+            const text = (document.getElementById('ttsText')?.value || '').trim() || ttsBuildAutoText();
+            if (!text) { hint.textContent = 'Пусто'; return; }
+            btn.disabled = true; btn.textContent = '⏳';
+            hint.textContent = '';
+            try {
+                const r = await fetch('/api/tts-preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text,
+                        voice: document.getElementById('ttsVoice').value,
+                        rate_pct: parseInt(document.getElementById('ttsRate').value, 10),
+                    }),
+                });
+                if (!r.ok) {
+                    const j = await r.json().catch(() => ({}));
+                    hint.textContent = '✗ ' + (j.error || r.status);
+                    return;
+                }
+                const blob = await r.blob();
+                audio.src = URL.createObjectURL(blob);
+                audio.style.display = '';
+                audio.play();
+                hint.textContent = '✓ ' + Math.round(blob.size / 1024) + 'KB';
+            } catch (e) {
+                hint.textContent = '✗ ' + e.message;
+            } finally {
+                btn.disabled = false; btn.textContent = '▶ Preview';
+            }
+        }
+
+        // Toggle panel visibility
+        (function() {
+            const cb = document.getElementById('pubWithTts');
+            const panel = document.getElementById('ttsPanel');
+            if (!cb || !panel) return;
+            cb.addEventListener('change', () => {
+                panel.style.display = cb.checked ? 'block' : 'none';
+                if (cb.checked) {
+                    const ta = document.getElementById('ttsText');
+                    if (ta && !ta.value.trim()) ta.placeholder = 'Авто: ' + ttsBuildAutoText().slice(0, 80);
+                }
+            });
+        })();
+
+        window.ttsPreview = ttsPreview;
+        window.getTtsPayload = getTtsPayload;
+
         (function uxPolish() {
             // --- Char counters ---
             // [inputId, softLimit, hardLimit] — soft = warn, hard = err
