@@ -537,7 +537,7 @@ def _escape_ssml(text: str) -> str:
 
 def _build_tts_text(card: dict) -> str:
     """Build natural-spoken sequence: word, pause, examples (Polish only)."""
-    parts: list[str] = []
+    parts = []
     word = (card.get("word") or "").strip()
     if word:
         # Use only first line of word field
@@ -563,7 +563,7 @@ def _build_ssml(text: str, voice: str = AZURE_TTS_DEFAULT_VOICE, rate_pct: int =
         '</voice></speak>'
     )
 
-async def _synth_voice_ogg(text: str, voice: str = AZURE_TTS_DEFAULT_VOICE, rate_pct: int = -10) -> bytes | None:
+async def _synth_voice_ogg(text: str, voice: str = AZURE_TTS_DEFAULT_VOICE, rate_pct: int = -10):
     """Returns OGG/Opus bytes suitable for Telegram voice notes, or None on failure."""
     if not AZURE_SPEECH_KEY or not text.strip():
         return None
