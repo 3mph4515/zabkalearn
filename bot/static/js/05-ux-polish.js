@@ -163,6 +163,7 @@
             return { tts_enabled: true, tts_text: txt, tts_voice: voice, tts_rate_pct: rate };
         }
 
+        let _ttsLastBlobUrl = null;
         async function ttsPreview() {
             const btn = document.getElementById('ttsPreviewBtn');
             const hint = document.getElementById('ttsHint');
@@ -186,12 +187,24 @@
                     hint.textContent = '✗ ' + (j.error || r.status);
                     return;
                 }
-                const blob = await r.blob();
-                audio.src = URL.createObjectURL(blob);
+                const buf = await r.arrayBuffer();
+                const blob = new Blob([buf], { type: 'audio/ogg; codecs=opus' });
+                if (_ttsLastBlobUrl) URL.revokeObjectURL(_ttsLastBlobUrl);
+                _ttsLastBlobUrl = URL.createObjectURL(blob);
+                audio.src = _ttsLastBlobUrl;
                 audio.style.display = '';
-                audio.play();
-                hint.textContent = '✓ ' + Math.round(blob.size / 1024) + 'KB';
+                audio.load();
+                hint.textContent = '✓ ' + Math.round(buf.byteLength / 1024) + 'KB';
+                // Try autoplay; if blocked — user uses controls. Don't crash on rejection.
+                const p = audio.play();
+                if (p && typeof p.catch === 'function') {
+                    p.catch(err => {
+                        console.warn('[tts] autoplay blocked:', err && err.message);
+                        hint.textContent += ' · ▶ ниже';
+                    });
+                }
             } catch (e) {
+                console.error('[tts] preview failed:', e);
                 hint.textContent = '✗ ' + e.message;
             } finally {
                 btn.disabled = false; btn.textContent = '▶ Preview';

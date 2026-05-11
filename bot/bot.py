@@ -33,7 +33,7 @@ DB_FILE = os.path.join(os.path.dirname(__file__), "quiz.db")
 
 # Separate versions for editor and quiz
 EDITOR_VERSION = "2.2"
-QUIZ_VERSION = "2.1"  # Split into smaller quizzes + better formatting
+QUIZ_VERSION = "2.2"  # Split into smaller quizzes + better formatting
 EDITOR_CHANGELOG = """• 6 новых декораций: снежинки, точки, кольца, листья, бриллианты, волны
 • Кнопка «Случайно» — выбирает 1-3 случайных декорации"""
 
