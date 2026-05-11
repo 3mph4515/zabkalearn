@@ -551,15 +551,41 @@ def _build_tts_text(card: dict) -> str:
             s = ""
         if s:
             parts.append(s)
-    return ". ".join(parts)[:TTS_MAX_INPUT_CHARS]
+    # Make sure each part ends with sentence-final punctuation so SSML splitter
+    # produces separate <s> blocks (more natural intonation).
+    def _terminate(s):
+        return s if s and s[-1] in ".!?…" else s + "."
+    return " ".join(_terminate(p) for p in parts)[:TTS_MAX_INPUT_CHARS]
 
 def _build_ssml(text: str, voice: str = AZURE_TTS_DEFAULT_VOICE, rate_pct: int = -10) -> str:
-    safe = _escape_ssml(text)
+    """Build SSML with sentence segmentation + breaks for natural intonation.
+
+    Splits on `.`, `!`, `?` (and our internal `· ` separator) so each fragment becomes
+    a <s> with a short <break> after. Avoids the flat-monotone "robot" feel of a single
+    blob of text passed straight to the synthesizer.
+    """
+    raw = text.replace("· ", ". ").strip()
+    # Split into sentences keeping punctuation
+    sentences = re.split(r"(?<=[.!?])\s+", raw)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    if not sentences:
+        sentences = [raw]
+
+    body_parts = []
+    for i, s in enumerate(sentences):
+        safe = _escape_ssml(s)
+        body_parts.append(f"<s>{safe}</s>")
+        # Pause between sentences; longer after the head-word (first short fragment).
+        if i < len(sentences) - 1:
+            gap = 700 if i == 0 and len(s) < 40 else 450
+            body_parts.append(f'<break time="{gap}ms"/>')
+
+    body = "".join(body_parts)
     rate = f"{rate_pct:+d}%"
     return (
         '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="pl-PL">'
         f'<voice name="{voice}">'
-        f'<prosody rate="{rate}">{safe}</prosody>'
+        f'<prosody rate="{rate}" pitch="+0%">{body}</prosody>'
         '</voice></speak>'
     )
 
@@ -606,9 +632,9 @@ async def _maybe_send_voice_reply(entity, card: dict, reply_to_msg_id: int, sche
         return
     voice = card.get("tts_voice") or AZURE_TTS_DEFAULT_VOICE
     try:
-        rate_pct = int(card.get("tts_rate_pct", -10))
+        rate_pct = int(card.get("tts_rate_pct", 0))
     except (TypeError, ValueError):
-        rate_pct = -10
+        rate_pct = 0
     audio = await _synth_voice_ogg(text, voice=voice, rate_pct=rate_pct)
     if not audio:
         log.info("TTS skipped (no audio) for '%s'", card.get("word", ""))

@@ -159,7 +159,7 @@
             const txt = (document.getElementById('ttsText')?.value || '').trim() || ttsBuildAutoText();
             if (!txt) return null;
             const voice = document.getElementById('ttsVoice')?.value || 'pl-PL-AgnieszkaNeural';
-            const rate = parseInt(document.getElementById('ttsRate')?.value || '-10', 10);
+            const rate = parseInt(document.getElementById('ttsRate')?.value || '0', 10);
             return { tts_enabled: true, tts_text: txt, tts_voice: voice, tts_rate_pct: rate };
         }
 
