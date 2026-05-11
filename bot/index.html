@@ -11,7 +11,7 @@
     <button class="theme-toggle" id="theme-toggle" title="Тёмная тема">🌙</button>
 
     <div class="container">
-        <h1>Polski Daily | Card Generator <span class="version">v2.7</span></h1>
+        <h1>Polski Daily | Card Generator <span class="version">v2.8</span></h1>
 
         <div class="panel controls-panel settings-panel">
             <h2>Настройки карточки</h2>
@@ -451,12 +451,14 @@
 
             <div id="ttsPanel" style="display:none;background:#f5f5f5;border-radius:7px;padding:8px;margin-bottom:8px;font-size:.75rem;">
                 <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
-                    <label style="flex:1;">Голос:
-                        <select id="ttsVoice" style="width:100%;padding:3px;border:1px solid #ddd;border-radius:5px;font-size:.72rem;">
-                            <option value="pl-PL-AgnieszkaNeural">Agnieszka (Ж, ⭐)</option>
-                            <option value="pl-PL-ZofiaNeural">Zofia (Ж)</option>
-                            <option value="pl-PL-MarekNeural">Marek (М)</option>
+                    <label style="width:110px;">Движок:
+                        <select id="ttsProvider" style="width:100%;padding:3px;border:1px solid #ddd;border-radius:5px;font-size:.72rem;">
+                            <option value="elevenlabs" selected>ElevenLabs ⭐</option>
+                            <option value="azure">Azure</option>
                         </select>
+                    </label>
+                    <label style="flex:1;">Голос:
+                        <select id="ttsVoice" style="width:100%;padding:3px;border:1px solid #ddd;border-radius:5px;font-size:.72rem;"></select>
                     </label>
                     <label style="width:90px;">Темп:
                         <select id="ttsRate" style="width:100%;padding:3px;border:1px solid #ddd;border-radius:5px;font-size:.72rem;">

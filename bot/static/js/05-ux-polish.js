@@ -154,13 +154,42 @@
             return parts.join('. ');
         }
 
+        const TTS_VOICES = {
+            elevenlabs: [
+                { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily (Ж, мягкий) ⭐' },
+                { id: 'XB0fDUnXU5powFXDhCwa', name: 'Charlotte (Ж, тёплый)' },
+                { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella (Ж, молодой)' },
+                { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel (Ж, классич.)' },
+                { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel (М, баритон)' },
+                { id: 'IKne3meq5aSn9XLyUdCD', name: 'Charlie (М, живой)' },
+                { id: 'ErXwobaYiN019PkySvjV', name: 'Antoni (М, мягкий)' },
+            ],
+            azure: [
+                { id: 'pl-PL-AgnieszkaNeural', name: 'Agnieszka (Ж)' },
+                { id: 'pl-PL-ZofiaNeural', name: 'Zofia (Ж)' },
+                { id: 'pl-PL-MarekNeural', name: 'Marek (М)' },
+            ],
+        };
+
+        function renderTtsVoices() {
+            const provSel = document.getElementById('ttsProvider');
+            const voiceSel = document.getElementById('ttsVoice');
+            if (!provSel || !voiceSel) return;
+            const list = TTS_VOICES[provSel.value] || TTS_VOICES.azure;
+            voiceSel.innerHTML = list.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+            // ElevenLabs doesn't honor SSML rate — show as informational
+            const rateSel = document.getElementById('ttsRate');
+            if (rateSel) rateSel.disabled = (provSel.value === 'elevenlabs');
+        }
+
         function getTtsPayload() {
             if (!document.getElementById('pubWithTts')?.checked) return null;
             const txt = (document.getElementById('ttsText')?.value || '').trim() || ttsBuildAutoText();
             if (!txt) return null;
-            const voice = document.getElementById('ttsVoice')?.value || 'pl-PL-AgnieszkaNeural';
+            const provider = document.getElementById('ttsProvider')?.value || 'azure';
+            const voice = document.getElementById('ttsVoice')?.value || '';
             const rate = parseInt(document.getElementById('ttsRate')?.value || '0', 10);
-            return { tts_enabled: true, tts_text: txt, tts_voice: voice, tts_rate_pct: rate };
+            return { tts_enabled: true, tts_provider: provider, tts_text: txt, tts_voice: voice, tts_rate_pct: rate };
         }
 
         let _ttsLastBlobUrl = null;
@@ -178,6 +207,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         text,
+                        provider: document.getElementById('ttsProvider').value,
                         voice: document.getElementById('ttsVoice').value,
                         rate_pct: parseInt(document.getElementById('ttsRate').value, 10),
                     }),
@@ -244,8 +274,11 @@
             }
         }
 
-        // Toggle panel visibility
+        // Toggle panel visibility + provider switch
         (function() {
+            renderTtsVoices();
+            const provSel = document.getElementById('ttsProvider');
+            if (provSel) provSel.addEventListener('change', renderTtsVoices);
             const cb = document.getElementById('pubWithTts');
             const panel = document.getElementById('ttsPanel');
             if (!cb || !panel) return;

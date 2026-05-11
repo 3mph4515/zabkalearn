@@ -98,6 +98,10 @@ AZURE_SPEECH_KEY = os.environ.get("AZURE_SPEECH_KEY", "")
 AZURE_SPEECH_REGION = os.environ.get("AZURE_SPEECH_REGION", "westeurope")
 AZURE_TTS_DEFAULT_VOICE = "pl-PL-AgnieszkaNeural"
 
+ELEVEN_API_KEY = os.environ.get("ELEVEN_API_KEY", "")
+ELEVEN_DEFAULT_VOICE = "pFZP5JQG7iQjIQuC4Bku"  # Lily — natural female multilingual
+ELEVEN_MODEL = "eleven_multilingual_v2"
+
 CHANNELS = {
     "debug": -1003772746301,
     "production": -1003738416290,
@@ -623,6 +627,61 @@ async def _synth_voice_ogg(text: str, voice: str = AZURE_TTS_DEFAULT_VOICE, rate
     return await _synth_voice(text, voice=voice, rate_pct=rate_pct, output_format=AZURE_FMT_OGG_OPUS)
 
 
+# ─── ElevenLabs ───
+ELEVEN_FMT_OGG_OPUS = "opus_48000_192"  # 48kHz Opus in OGG container — Telegram-compatible
+ELEVEN_FMT_MP3 = "mp3_44100_128"
+
+async def _synth_voice_eleven(text: str, voice_id: str = ELEVEN_DEFAULT_VOICE,
+                              rate_pct: int = 0, output_format: str = ELEVEN_FMT_OGG_OPUS):
+    """Returns audio bytes from ElevenLabs Multilingual v2. Far more natural than Azure for Polish.
+    Note: ElevenLabs has no native rate control — rate_pct is currently ignored.
+    """
+    if not ELEVEN_API_KEY or not text.strip():
+        return None
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?output_format={output_format}"
+    headers = {
+        "xi-api-key": ELEVEN_API_KEY,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg" if output_format.startswith("mp3") else "audio/ogg",
+    }
+    payload = {
+        "text": text,
+        "model_id": ELEVEN_MODEL,
+        "voice_settings": {
+            "stability": 0.55,
+            "similarity_boost": 0.8,
+            "style": 0.15,
+            "use_speaker_boost": True,
+        },
+    }
+    try:
+        timeout = aiohttp.ClientTimeout(total=30)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(url, json=payload, headers=headers) as resp:
+                if resp.status != 200:
+                    body = await resp.text()
+                    log.warning("ElevenLabs HTTP %d: %s", resp.status, body[:300])
+                    return None
+                return await resp.read()
+    except Exception as e:
+        log.warning("ElevenLabs request failed: %s", e)
+        return None
+
+
+async def _dispatch_synth(provider: str, text: str, voice: str, rate_pct: int, fmt: str):
+    """Provider-agnostic synthesis dispatcher.
+    `fmt` is logical: "ogg" or "mp3". Provider maps to its own concrete format.
+    """
+    if provider == "elevenlabs":
+        ef = ELEVEN_FMT_OGG_OPUS if fmt == "ogg" else ELEVEN_FMT_MP3
+        return await _synth_voice_eleven(text, voice_id=voice or ELEVEN_DEFAULT_VOICE,
+                                         rate_pct=rate_pct, output_format=ef)
+    # default azure
+    af = AZURE_FMT_OGG_OPUS if fmt == "ogg" else AZURE_FMT_MP3
+    return await _synth_voice(text, voice=voice or AZURE_TTS_DEFAULT_VOICE,
+                              rate_pct=rate_pct, output_format=af)
+
+
 async def _maybe_send_voice_reply(entity, card: dict, reply_to_msg_id: int, schedule_dt):
     """If card.tts_enabled, synthesize Polish voice note and send as reply."""
     if not card.get("tts_enabled"):
@@ -630,12 +689,13 @@ async def _maybe_send_voice_reply(entity, card: dict, reply_to_msg_id: int, sche
     text = (card.get("tts_text") or "").strip() or _build_tts_text(card)
     if not text:
         return
-    voice = card.get("tts_voice") or AZURE_TTS_DEFAULT_VOICE
+    provider = (card.get("tts_provider") or "azure").lower()
+    voice = card.get("tts_voice") or (ELEVEN_DEFAULT_VOICE if provider == "elevenlabs" else AZURE_TTS_DEFAULT_VOICE)
     try:
         rate_pct = int(card.get("tts_rate_pct", 0))
     except (TypeError, ValueError):
         rate_pct = 0
-    audio = await _synth_voice_ogg(text, voice=voice, rate_pct=rate_pct)
+    audio = await _dispatch_synth(provider, text, voice=voice, rate_pct=rate_pct, fmt="ogg")
     if not audio:
         log.info("TTS skipped (no audio) for '%s'", card.get("word", ""))
         return
@@ -764,18 +824,17 @@ async def handle_tts_preview(request):
         rate_pct = int(data.get("rate_pct", -10))
     except (TypeError, ValueError):
         rate_pct = -10
-    if not AZURE_SPEECH_KEY:
+    provider = (data.get("provider") or "azure").lower()
+    if provider == "elevenlabs" and not ELEVEN_API_KEY:
+        return web.json_response({"ok": False, "error": "ELEVEN_API_KEY not configured"}, status=500)
+    if provider != "elevenlabs" and not AZURE_SPEECH_KEY:
         return web.json_response({"ok": False, "error": "AZURE_SPEECH_KEY not configured"}, status=500)
     # Browsers (esp. Windows Chrome) play MP3 universally; OGG/Opus is hit-or-miss.
     fmt = (data.get("format") or "mp3").lower()
-    if fmt == "ogg":
-        audio = await _synth_voice(text, voice=voice, rate_pct=rate_pct, output_format=AZURE_FMT_OGG_OPUS)
-        ctype = "audio/ogg"
-    else:
-        audio = await _synth_voice(text, voice=voice, rate_pct=rate_pct, output_format=AZURE_FMT_MP3)
-        ctype = "audio/mpeg"
+    audio = await _dispatch_synth(provider, text, voice=voice, rate_pct=rate_pct, fmt=fmt)
     if not audio:
         return web.json_response({"ok": False, "error": "Synthesis failed"}, status=502)
+    ctype = "audio/ogg" if fmt == "ogg" else "audio/mpeg"
     return web.Response(body=audio, content_type=ctype)
 
 
