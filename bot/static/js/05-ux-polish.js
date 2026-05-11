@@ -182,6 +182,18 @@
             if (rateSel) rateSel.disabled = (provSel.value === 'elevenlabs');
         }
 
+        // Detect dialogue format: ≥2 distinct "Name: text" speakers across lines
+        function ttsIsDialogue(text) {
+            const lines = (text || '').split('\n').map(l => l.trim()).filter(Boolean);
+            const speakers = new Set();
+            const re = /^([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż' \-]{1,30}):\s*\S/;
+            for (const l of lines) {
+                const m = l.match(re);
+                if (m) speakers.add(m[1].toLowerCase());
+            }
+            return speakers.size >= 2;
+        }
+
         function getTtsPayload() {
             if (!document.getElementById('pubWithTts')?.checked) return null;
             const txt = (document.getElementById('ttsText')?.value || '').trim() || ttsBuildAutoText();
@@ -189,7 +201,16 @@
             const provider = document.getElementById('ttsProvider')?.value || 'azure';
             const voice = document.getElementById('ttsVoice')?.value || '';
             const rate = parseInt(document.getElementById('ttsRate')?.value || '0', 10);
-            return { tts_enabled: true, tts_provider: provider, tts_text: txt, tts_voice: voice, tts_rate_pct: rate };
+            const explicitDialog = document.getElementById('ttsDialog')?.checked;
+            const dialogue = explicitDialog || ttsIsDialogue(txt);
+            return {
+                tts_enabled: true,
+                tts_provider: provider,
+                tts_text: txt,
+                tts_voice: voice,
+                tts_rate_pct: rate,
+                tts_dialogue: dialogue,
+            };
         }
 
         let _ttsLastBlobUrl = null;
@@ -202,6 +223,7 @@
             btn.disabled = true; btn.textContent = '⏳';
             hint.textContent = '';
             try {
+                const dialog = document.getElementById('ttsDialog')?.checked || ttsIsDialogue(text);
                 const r = await fetch('/api/tts-preview', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -210,6 +232,7 @@
                         provider: document.getElementById('ttsProvider').value,
                         voice: document.getElementById('ttsVoice').value,
                         rate_pct: parseInt(document.getElementById('ttsRate').value, 10),
+                        dialogue: dialog,
                     }),
                 });
                 if (!r.ok) {
@@ -274,19 +297,27 @@
             }
         }
 
-        // Toggle panel visibility + provider switch
+        // Toggle panel visibility + provider switch + dialog auto-detect badge
         (function() {
             renderTtsVoices();
             const provSel = document.getElementById('ttsProvider');
             if (provSel) provSel.addEventListener('change', renderTtsVoices);
             const cb = document.getElementById('pubWithTts');
             const panel = document.getElementById('ttsPanel');
+            const ta = document.getElementById('ttsText');
+            const dialogBadge = document.getElementById('ttsDialogAuto');
+            const refreshDialogBadge = () => {
+                if (!dialogBadge) return;
+                const txt = (ta?.value || '').trim() || ttsBuildAutoText();
+                dialogBadge.style.display = ttsIsDialogue(txt) ? '' : 'none';
+            };
+            if (ta) ta.addEventListener('input', refreshDialogBadge);
             if (!cb || !panel) return;
             cb.addEventListener('change', () => {
                 panel.style.display = cb.checked ? 'block' : 'none';
                 if (cb.checked) {
-                    const ta = document.getElementById('ttsText');
                     if (ta && !ta.value.trim()) ta.placeholder = 'Авто: ' + ttsBuildAutoText().slice(0, 80);
+                    refreshDialogBadge();
                 }
             });
         })();

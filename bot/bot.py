@@ -32,8 +32,8 @@ VERSION_FILE = os.path.join(os.path.dirname(__file__), "last_version.txt")
 DB_FILE = os.path.join(os.path.dirname(__file__), "quiz.db")
 
 # Separate versions for editor and quiz
-EDITOR_VERSION = "2.9"
-QUIZ_VERSION = "2.9"  # Split into smaller quizzes + better formatting
+EDITOR_VERSION = "2.10"
+QUIZ_VERSION = "2.10"  # Split into smaller quizzes + better formatting
 EDITOR_CHANGELOG = """• 6 новых декораций: снежинки, точки, кольца, листья, бриллианты, волны
 • Кнопка «Случайно» — выбирает 1-3 случайных декорации"""
 

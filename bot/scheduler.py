@@ -8,6 +8,8 @@ Hosted with basic auth + rate limiting
 import os
 import json
 import asyncio
+import subprocess
+import tempfile
 import base64
 import hashlib
 import hmac
@@ -668,6 +670,179 @@ async def _synth_voice_eleven(text: str, voice_id: str = ELEVEN_DEFAULT_VOICE,
         return None
 
 
+# ─── Dialogue (multi-voice) ───
+
+# Speaker-name → likely gender heuristic for Polish dialogue scripts.
+_PL_FEMALE_SPEAKERS = {
+    "żona", "pani", "ona", "kobieta", "dziewczyna", "matka", "córka", "siostra",
+    "babcia", "klientka", "sprzedawczyni", "lekarka", "nauczycielka", "kelnerka",
+    "ania", "kasia", "magda", "agnieszka", "zofia", "ewa", "marta", "ola",
+    "monika", "joanna", "anna", "maria", "natalia", "barbara",
+}
+_PL_MALE_SPEAKERS = {
+    "mąż", "pan", "on", "mężczyzna", "chłopak", "ojciec", "syn", "brat",
+    "dziadek", "klient", "sprzedawca", "lekarz", "nauczyciel", "kelner",
+    "adam", "marek", "tomek", "piotr", "michał", "krzysztof", "jakub", "paweł",
+    "andrzej", "stanisław", "wojciech", "jan",
+}
+
+_DIALOG_LINE_RE = re.compile(r"^\s*([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż' \-]{1,30}):\s*(.+?)\s*$")
+
+def _split_dialogue(text: str):
+    """Parse 'Speaker: line' format. Returns list of (speaker_lower, raw_speaker, line)."""
+    out = []
+    for raw in text.splitlines():
+        raw = raw.strip()
+        if not raw:
+            continue
+        m = _DIALOG_LINE_RE.match(raw)
+        if not m:
+            # Not a dialogue line — treat as continuation of previous speaker or narrator
+            if out:
+                # Append to previous line
+                sp_lo, sp, prev = out[-1]
+                out[-1] = (sp_lo, sp, prev + " " + raw)
+            else:
+                out.append(("narrator", "Narrator", raw))
+            continue
+        sp = m.group(1).strip()
+        line = m.group(2).strip()
+        out.append((sp.lower(), sp, line))
+    return out
+
+
+def _is_dialogue(text: str) -> bool:
+    """True if at least 2 distinct speakers detected."""
+    segs = _split_dialogue(text)
+    speakers = {s for s, _, _ in segs if s != "narrator"}
+    return len(speakers) >= 2
+
+
+def _gender_for_speaker(name_lower: str):
+    """Returns 'f', 'm', or None if unknown."""
+    if name_lower in _PL_FEMALE_SPEAKERS:
+        return "f"
+    if name_lower in _PL_MALE_SPEAKERS:
+        return "m"
+    # Heuristic: Polish female names often end in 'a' (Anna, Maria, Kasia)
+    if name_lower.endswith("a") and name_lower not in {"adam", "kuba"}:
+        return "f"
+    return None
+
+
+def _assign_dialogue_voices(segments, provider: str, voice_pool: dict):
+    """Map each segment to a concrete voice id.
+    `voice_pool` is {'f': [voice_ids], 'm': [voice_ids], 'n': [voice_ids]}.
+    Different speakers within same gender rotate through that gender's pool.
+    """
+    speaker_to_voice = {}
+    f_idx = m_idx = 0
+    f_pool = voice_pool.get("f") or []
+    m_pool = voice_pool.get("m") or []
+    fallback = (f_pool + m_pool) or [None]
+
+    assignments = []
+    for sp_lo, sp_raw, line in segments:
+        if sp_lo in speaker_to_voice:
+            v = speaker_to_voice[sp_lo]
+        else:
+            g = _gender_for_speaker(sp_lo)
+            if g == "f" and f_pool:
+                v = f_pool[f_idx % len(f_pool)]; f_idx += 1
+            elif g == "m" and m_pool:
+                v = m_pool[m_idx % len(m_pool)]; m_idx += 1
+            else:
+                # Unknown — alternate by total speakers assigned so far
+                if (f_idx + m_idx) % 2 == 0 and f_pool:
+                    v = f_pool[f_idx % len(f_pool)]; f_idx += 1
+                elif m_pool:
+                    v = m_pool[m_idx % len(m_pool)]; m_idx += 1
+                else:
+                    v = fallback[0]
+            speaker_to_voice[sp_lo] = v
+        assignments.append((sp_raw, v, line))
+    return assignments
+
+
+# Per-provider default voice pools for dialogue auto-assign
+DIALOGUE_DEFAULT_POOLS = {
+    "elevenlabs": {
+        "f": ["pFZP5JQG7iQjIQuC4Bku", "XB0fDUnXU5powFXDhCwa", "EXAVITQu4vr4xnSDxMaL", "21m00Tcm4TlvDq8ikWAM"],
+        "m": ["onwK4e9ZLuTAKqWW03F9", "IKne3meq5aSn9XLyUdCD", "ErXwobaYiN019PkySvjV"],
+    },
+    "azure": {
+        "f": ["pl-PL-AgnieszkaNeural", "pl-PL-ZofiaNeural"],
+        "m": ["pl-PL-MarekNeural"],
+    },
+}
+
+
+def _ffmpeg_concat_to_ogg(segments_mp3: list) -> bytes:
+    """Take list of mp3 byte-strings, concat via ffmpeg, return OGG/Opus bytes for voice note.
+    Adds a 350ms silence between segments for natural pacing.
+    """
+    if not segments_mp3:
+        return b""
+    with tempfile.TemporaryDirectory() as td:
+        # Write each segment, plus silence padding
+        paths = []
+        silence_path = os.path.join(td, "silence.mp3")
+        # Generate 350ms silence as mp3 once
+        subprocess.run(
+            ["ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=24000:cl=mono", "-t", "0.35",
+             "-c:a", "libmp3lame", "-b:a", "64k", silence_path],
+            check=True, capture_output=True,
+        )
+        for i, seg in enumerate(segments_mp3):
+            p = os.path.join(td, f"seg_{i}.mp3")
+            with open(p, "wb") as f:
+                f.write(seg)
+            paths.append(p)
+        # Build concat list
+        concat_list = os.path.join(td, "list.txt")
+        with open(concat_list, "w", encoding="utf-8") as f:
+            for i, p in enumerate(paths):
+                f.write(f"file '{p}'\n")
+                if i < len(paths) - 1:
+                    f.write(f"file '{silence_path}'\n")
+        out_path = os.path.join(td, "out.ogg")
+        subprocess.run(
+            ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", concat_list,
+             "-c:a", "libopus", "-b:a", "48k", "-application", "voip",
+             "-ar", "48000", "-ac", "1", out_path],
+            check=True, capture_output=True,
+        )
+        with open(out_path, "rb") as f:
+            return f.read()
+
+
+async def _synth_dialogue(text: str, provider: str = "elevenlabs", voice_pool: dict = None):
+    """Synthesize a multi-speaker dialogue and return OGG/Opus bytes (Telegram-ready)."""
+    segments = _split_dialogue(text)
+    if not segments:
+        return None
+    pool = voice_pool or DIALOGUE_DEFAULT_POOLS.get(provider) or DIALOGUE_DEFAULT_POOLS["azure"]
+    assignments = _assign_dialogue_voices(segments, provider, pool)
+
+    mp3_chunks = []
+    for sp_raw, voice_id, line in assignments:
+        if not line:
+            continue
+        audio = await _dispatch_synth(provider, line, voice=voice_id, rate_pct=0, fmt="mp3")
+        if audio:
+            mp3_chunks.append(audio)
+        else:
+            log.warning("Dialogue segment failed for speaker '%s'", sp_raw)
+    if not mp3_chunks:
+        return None
+    # Run ffmpeg in thread (subprocess is blocking)
+    try:
+        return await asyncio.get_event_loop().run_in_executor(None, _ffmpeg_concat_to_ogg, mp3_chunks)
+    except subprocess.CalledProcessError as e:
+        log.error("ffmpeg concat failed: %s", (e.stderr or b"")[:300])
+        return None
+
+
 async def _dispatch_synth(provider: str, text: str, voice: str, rate_pct: int, fmt: str):
     """Provider-agnostic synthesis dispatcher.
     `fmt` is logical: "ogg" or "mp3". Provider maps to its own concrete format.
@@ -695,7 +870,13 @@ async def _maybe_send_voice_reply(entity, card: dict, reply_to_msg_id: int, sche
         rate_pct = int(card.get("tts_rate_pct", 0))
     except (TypeError, ValueError):
         rate_pct = 0
-    audio = await _dispatch_synth(provider, text, voice=voice, rate_pct=rate_pct, fmt="ogg")
+
+    # Auto-detect dialogue (or explicit flag) → multi-voice synth
+    dialogue_mode = card.get("tts_dialogue") or _is_dialogue(text)
+    if dialogue_mode:
+        audio = await _synth_dialogue(text, provider=provider)
+    else:
+        audio = await _dispatch_synth(provider, text, voice=voice, rate_pct=rate_pct, fmt="ogg")
     if not audio:
         log.info("TTS skipped (no audio) for '%s'", card.get("word", ""))
         return
@@ -831,10 +1012,18 @@ async def handle_tts_preview(request):
         return web.json_response({"ok": False, "error": "AZURE_SPEECH_KEY not configured"}, status=500)
     # Browsers (esp. Windows Chrome) play MP3 universally; OGG/Opus is hit-or-miss.
     fmt = (data.get("format") or "mp3").lower()
-    audio = await _dispatch_synth(provider, text, voice=voice, rate_pct=rate_pct, fmt=fmt)
+    dialogue_mode = bool(data.get("dialogue")) or _is_dialogue(text)
+    if dialogue_mode:
+        audio = await _synth_dialogue(text, provider=provider)
+        # _synth_dialogue returns OGG/Opus; if browser wants mp3 we'd need to re-encode.
+        # For simplicity force ogg in dialogue mode (Chrome plays OGG/Opus fine in current builds;
+        # if it doesn't, frontend will fall back to Web Audio).
+        ctype = "audio/ogg"
+    else:
+        audio = await _dispatch_synth(provider, text, voice=voice, rate_pct=rate_pct, fmt=fmt)
+        ctype = "audio/ogg" if fmt == "ogg" else "audio/mpeg"
     if not audio:
         return web.json_response({"ok": False, "error": "Synthesis failed"}, status=502)
-    ctype = "audio/ogg" if fmt == "ogg" else "audio/mpeg"
     return web.Response(body=audio, content_type=ctype)
 
 
