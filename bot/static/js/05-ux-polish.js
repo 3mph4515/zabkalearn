@@ -189,33 +189,46 @@
                 }
                 const buf = await r.arrayBuffer();
                 const ct = (r.headers.get('Content-Type') || 'audio/mpeg').split(';')[0].trim();
-                console.log('[tts] got', buf.byteLength, 'bytes,', ct);
-
-                // Use data URL (works in all browsers, no blob:URL quirks)
                 const bytes = new Uint8Array(buf);
-                let bin = '';
-                const CHUNK = 0x8000;
-                for (let i = 0; i < bytes.length; i += CHUNK) {
-                    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
-                }
-                const dataUrl = 'data:' + ct + ';base64,' + btoa(bin);
+                const head = Array.from(bytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' ');
+                console.log('[tts] got', buf.byteLength, 'bytes, ct=' + ct + ', head=' + head);
 
+                hint.textContent = '✓ ' + Math.round(buf.byteLength / 1024) + 'KB';
+
+                // Primary path: Web Audio API decodes MP3 in any Chrome (no <audio> element quirks)
+                try {
+                    if (!window._ttsCtx) window._ttsCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const ctx = window._ttsCtx;
+                    if (ctx.state === 'suspended') await ctx.resume();
+                    // decodeAudioData mutates input buffer in some impls — pass a copy
+                    const decoded = await ctx.decodeAudioData(buf.slice(0));
+                    if (window._ttsSource) { try { window._ttsSource.stop(); } catch (_) {} }
+                    const src = ctx.createBufferSource();
+                    src.buffer = decoded;
+                    src.connect(ctx.destination);
+                    src.start(0);
+                    window._ttsSource = src;
+                    console.log('[tts] WebAudio play OK, duration =', decoded.duration.toFixed(2), 'sec');
+                    audio.style.display = 'none';
+                    return;
+                } catch (we) {
+                    console.warn('[tts] WebAudio failed:', we && we.message, '— falling back to <audio>');
+                }
+
+                // Fallback: blob URL on <audio>
+                const blob = new Blob([buf], { type: ct });
+                if (_ttsLastBlobUrl) URL.revokeObjectURL(_ttsLastBlobUrl);
+                _ttsLastBlobUrl = URL.createObjectURL(blob);
                 audio.onerror = () => {
                     const e = audio.error;
                     const codes = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' };
                     const code = e ? (codes[e.code] || e.code) : '?';
-                    console.error('[tts] audio error:', code, e && e.message);
+                    console.error('[tts] <audio> error:', code);
                     hint.textContent = '✗ audio: ' + code;
                 };
-                audio.onloadedmetadata = () => {
-                    console.log('[tts] metadata loaded, duration =', audio.duration);
-                };
-
-                audio.src = dataUrl;
+                audio.src = _ttsLastBlobUrl;
                 audio.style.display = '';
                 audio.load();
-                hint.textContent = '✓ ' + Math.round(buf.byteLength / 1024) + 'KB';
-
                 const p = audio.play();
                 if (p && typeof p.catch === 'function') {
                     p.catch(err => {
