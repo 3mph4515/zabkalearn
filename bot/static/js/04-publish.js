@@ -391,6 +391,7 @@
             idx: 0,            // current card index
             doneCount: 0,
             skippedCount: 0,
+            skippedList: [],   // [{word, date, channel}]
             active: false,
         };
 
@@ -504,6 +505,7 @@
             queueState.idx = 0;
             queueState.doneCount = 0;
             queueState.skippedCount = 0;
+            queueState.skippedList = [];
             queueState.active = true;
 
             closeQueueModal();
@@ -553,11 +555,15 @@
                     const dup = await checkDuplicateWord(card.word, queueState.channel);
                     if (dup.exists) {
                         const m = dup.matches[0];
-                        dupEl.textContent = '⚠️ дубликат (' + (m.date || '').slice(0, 10) + ', ' + dup.channel + ')';
+                        const prevDate = (m.date || '').slice(0, 10);
+                        dupEl.textContent = '⚠️ дубликат (' + prevDate + ', ' + dup.channel + ')';
                         dupEl.style.display = '';
                         if (queueState.skipDup) {
                             queueState.skippedCount++;
+                            queueState.skippedList.push({ word: card.word, date: prevDate, channel: dup.channel });
+                            pubToast('⏭ скип: ' + card.word + ' — уже было ' + prevDate, 'er');
                             queueState.idx++;
+                            await new Promise(r => setTimeout(r, 700));
                             return loadCurrentQueueCard();
                         }
                     }
@@ -646,8 +652,40 @@
             document.body.style.paddingBottom = '';
             document.body.classList.remove('queue-active');
             pubToast(reason + '. Готово: ' + queueState.doneCount + ', пропущено: ' + queueState.skippedCount, 'ok');
+            if (queueState.skippedList.length) {
+                const lines = queueState.skippedList
+                    .map(s => '• ' + s.word + ' — был ' + s.date + ' (' + s.channel + ')')
+                    .join('\n');
+                console.warn('[queue] skipped duplicates:\n' + lines);
+                showSkippedModal(queueState.skippedList);
+            }
             // Refresh scheduled list
             if (typeof loadScheduledEditor === 'function') loadScheduledEditor();
+        }
+
+        function showSkippedModal(list) {
+            let m = document.getElementById('skippedModal');
+            if (!m) {
+                m = document.createElement('div');
+                m.id = 'skippedModal';
+                m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+                m.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:520px;width:100%;padding:24px;max-height:80vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.3);">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
+                    '<h2 style="font-family:Poppins,sans-serif;color:#e65100;margin:0;font-size:1.15rem;">⏭ Пропущенные дубликаты</h2>' +
+                    '<button onclick="document.getElementById(\'skippedModal\').remove()" style="border:none;background:transparent;font-size:1.4rem;cursor:pointer;color:#999;">×</button>' +
+                    '</div>' +
+                    '<div id="skippedListBody" style="font-size:.92rem;line-height:1.6;"></div>' +
+                    '<div style="margin-top:16px;text-align:right;">' +
+                    '<button onclick="document.getElementById(\'skippedModal\').remove()" style="padding:8px 16px;border:none;background:#4CAF50;color:#fff;border-radius:7px;cursor:pointer;font-weight:600;">OK</button>' +
+                    '</div></div>';
+                document.body.appendChild(m);
+            }
+            const body = m.querySelector('#skippedListBody');
+            body.innerHTML = list.map(s =>
+                '<div style="padding:6px 0;border-bottom:1px solid #eee;">' +
+                '<b>' + s.word + '</b> — был <span style="color:#666;">' + s.date + '</span> ' +
+                '<span style="color:#999;font-size:.85rem;">(' + s.channel + ')</span></div>'
+            ).join('');
         }
 
         // Initial draw
