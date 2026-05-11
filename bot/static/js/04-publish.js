@@ -138,10 +138,11 @@
             if (exampleList.length) {
                 lines.push('');
                 lines.push(exampleList.length > 1 ? '\u041F\u0440\u0438\u043C\u0435\u0440\u044B:' : '\u041F\u0440\u0438\u043C\u0435\u0440:');
-                exampleList.forEach(ex => {
-                    ex.split('\n').forEach(line => {
-                        if (line.trim()) lines.push('\u2022 ' + line.trim());
-                    });
+                exampleList.forEach((ex, idx) => {
+                    const inner = ex.split('\n').map(l => l.trim()).filter(Boolean);
+                    if (!inner.length) return;
+                    if (idx > 0) lines.push(''); // blank line between examples
+                    inner.forEach(l => lines.push(l));
                 });
             }
 
