@@ -188,15 +188,34 @@
                     return;
                 }
                 const buf = await r.arrayBuffer();
-                const ct = r.headers.get('Content-Type') || 'audio/mpeg';
-                const blob = new Blob([buf], { type: ct });
-                if (_ttsLastBlobUrl) URL.revokeObjectURL(_ttsLastBlobUrl);
-                _ttsLastBlobUrl = URL.createObjectURL(blob);
-                audio.src = _ttsLastBlobUrl;
+                const ct = (r.headers.get('Content-Type') || 'audio/mpeg').split(';')[0].trim();
+                console.log('[tts] got', buf.byteLength, 'bytes,', ct);
+
+                // Use data URL (works in all browsers, no blob:URL quirks)
+                const bytes = new Uint8Array(buf);
+                let bin = '';
+                const CHUNK = 0x8000;
+                for (let i = 0; i < bytes.length; i += CHUNK) {
+                    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+                }
+                const dataUrl = 'data:' + ct + ';base64,' + btoa(bin);
+
+                audio.onerror = () => {
+                    const e = audio.error;
+                    const codes = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' };
+                    const code = e ? (codes[e.code] || e.code) : '?';
+                    console.error('[tts] audio error:', code, e && e.message);
+                    hint.textContent = '✗ audio: ' + code;
+                };
+                audio.onloadedmetadata = () => {
+                    console.log('[tts] metadata loaded, duration =', audio.duration);
+                };
+
+                audio.src = dataUrl;
                 audio.style.display = '';
                 audio.load();
                 hint.textContent = '✓ ' + Math.round(buf.byteLength / 1024) + 'KB';
-                // Try autoplay; if blocked — user uses controls. Don't crash on rejection.
+
                 const p = audio.play();
                 if (p && typeof p.catch === 'function') {
                     p.catch(err => {
