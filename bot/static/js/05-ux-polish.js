@@ -188,7 +188,8 @@
                     return;
                 }
                 const buf = await r.arrayBuffer();
-                const blob = new Blob([buf], { type: 'audio/ogg; codecs=opus' });
+                const ct = r.headers.get('Content-Type') || 'audio/mpeg';
+                const blob = new Blob([buf], { type: ct });
                 if (_ttsLastBlobUrl) URL.revokeObjectURL(_ttsLastBlobUrl);
                 _ttsLastBlobUrl = URL.createObjectURL(blob);
                 audio.src = _ttsLastBlobUrl;

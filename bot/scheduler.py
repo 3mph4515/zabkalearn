@@ -563,15 +563,19 @@ def _build_ssml(text: str, voice: str = AZURE_TTS_DEFAULT_VOICE, rate_pct: int =
         '</voice></speak>'
     )
 
-async def _synth_voice_ogg(text: str, voice: str = AZURE_TTS_DEFAULT_VOICE, rate_pct: int = -10):
-    """Returns OGG/Opus bytes suitable for Telegram voice notes, or None on failure."""
+AZURE_FMT_OGG_OPUS = "ogg-48khz-16bit-mono-opus"
+AZURE_FMT_MP3 = "audio-24khz-160kbitrate-mono-mp3"
+
+async def _synth_voice(text: str, voice: str = AZURE_TTS_DEFAULT_VOICE,
+                       rate_pct: int = -10, output_format: str = AZURE_FMT_OGG_OPUS):
+    """Returns audio bytes (default OGG/Opus for Telegram voice notes) or None on failure."""
     if not AZURE_SPEECH_KEY or not text.strip():
         return None
     url = f"https://{AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1"
     headers = {
         "Ocp-Apim-Subscription-Key": AZURE_SPEECH_KEY,
         "Content-Type": "application/ssml+xml",
-        "X-Microsoft-OutputFormat": "ogg-48khz-16bit-mono-opus",
+        "X-Microsoft-OutputFormat": output_format,
         "User-Agent": "zabka-learn",
     }
     ssml = _build_ssml(text, voice=voice, rate_pct=rate_pct)
@@ -587,6 +591,10 @@ async def _synth_voice_ogg(text: str, voice: str = AZURE_TTS_DEFAULT_VOICE, rate
     except Exception as e:
         log.warning("Azure TTS request failed: %s", e)
         return None
+
+# Backwards-compat alias for existing callers (Telegram voice note path)
+async def _synth_voice_ogg(text: str, voice: str = AZURE_TTS_DEFAULT_VOICE, rate_pct: int = -10):
+    return await _synth_voice(text, voice=voice, rate_pct=rate_pct, output_format=AZURE_FMT_OGG_OPUS)
 
 
 async def _maybe_send_voice_reply(entity, card: dict, reply_to_msg_id: int, schedule_dt):
@@ -732,10 +740,17 @@ async def handle_tts_preview(request):
         rate_pct = -10
     if not AZURE_SPEECH_KEY:
         return web.json_response({"ok": False, "error": "AZURE_SPEECH_KEY not configured"}, status=500)
-    audio = await _synth_voice_ogg(text, voice=voice, rate_pct=rate_pct)
+    # Browsers (esp. Windows Chrome) play MP3 universally; OGG/Opus is hit-or-miss.
+    fmt = (data.get("format") or "mp3").lower()
+    if fmt == "ogg":
+        audio = await _synth_voice(text, voice=voice, rate_pct=rate_pct, output_format=AZURE_FMT_OGG_OPUS)
+        ctype = "audio/ogg"
+    else:
+        audio = await _synth_voice(text, voice=voice, rate_pct=rate_pct, output_format=AZURE_FMT_MP3)
+        ctype = "audio/mpeg"
     if not audio:
         return web.json_response({"ok": False, "error": "Synthesis failed"}, status=502)
-    return web.Response(body=audio, content_type="audio/ogg")
+    return web.Response(body=audio, content_type=ctype)
 
 
 async def handle_scheduled_list(request):
