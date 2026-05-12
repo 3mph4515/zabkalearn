@@ -32,8 +32,8 @@ VERSION_FILE = os.path.join(os.path.dirname(__file__), "last_version.txt")
 DB_FILE = os.path.join(os.path.dirname(__file__), "quiz.db")
 
 # Separate versions for editor and quiz
-EDITOR_VERSION = "2.11"
-QUIZ_VERSION = "2.11"  # Split into smaller quizzes + better formatting
+EDITOR_VERSION = "2.12"
+QUIZ_VERSION = "2.12"  # Split into smaller quizzes + better formatting
 EDITOR_CHANGELOG = """• 6 новых декораций: снежинки, точки, кольца, листья, бриллианты, волны
 • Кнопка «Случайно» — выбирает 1-3 случайных декорации"""
 
@@ -755,12 +755,8 @@ async def start(update, context):
 
 
 def get_main_menu_keyboard():
-    """Get main menu keyboard"""
+    """Get main menu keyboard. Editor moved to web — no button here anymore."""
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(
-            f"📥 Редактор v{EDITOR_VERSION}",
-            callback_data="get_editor"
-        )],
         [InlineKeyboardButton(
             f"📝 Тесты v{QUIZ_VERSION}",
             callback_data="quiz_menu"
@@ -1225,11 +1221,12 @@ async def button_callback(update, context):
     # ===== ORIGINAL CALLBACKS =====
 
     elif data == "get_editor":
-        # Ask for password
-        pending_editor_password[user_id] = True
+        # Editor migrated to web — no HTML distribution anymore.
         await query.message.reply_text(
-            "🔐 **Доступ к редактору**\n\n"
-            "Введи пароль:",
+            "🌐 **Редактор переехал в веб!**\n\n"
+            "HTML-файл больше не рассылается. "
+            "Пиши автору за доступом.",
+            reply_markup=get_main_menu_keyboard(),
             parse_mode="Markdown"
         )
 
@@ -1276,8 +1273,7 @@ async def post_init(application):
     init_db()
     seed_sample_quiz()
 
-    # Send version notifications (only for editor updates)
-    await notify_new_version(application.bot)
+    # Editor moved to web — no more version broadcasts or HTML file delivery.
 
 
 def main():
