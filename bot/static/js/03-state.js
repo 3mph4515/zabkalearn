@@ -26,6 +26,40 @@
                     document.getElementById('badge-text').value = btn.dataset.badge;
                 }
 
+                // Słuchanie: auto-enable TTS dialog mode + pre-fill defaults
+                if (currentTemplate === 'sluchanie') {
+                    const word = document.getElementById('main-word');
+                    if (word && !word.value.replace(/\s/g, '')) {
+                        word.value = 'Posłuchaj. Wybierz najlepszą odpowiedź:';
+                    }
+                    const sub = document.getElementById('subtitle');
+                    if (sub && !sub.value.trim()) sub.value = 'Poziom: A2-B1 · Słuchanie';
+                    const ttsCb = document.getElementById('pubWithTts');
+                    if (ttsCb && !ttsCb.checked) { ttsCb.checked = true; ttsCb.dispatchEvent(new Event('change')); }
+                    const provSel = document.getElementById('ttsProvider');
+                    if (provSel && provSel.value !== 'elevenlabs') {
+                        provSel.value = 'elevenlabs';
+                        provSel.dispatchEvent(new Event('change'));
+                    }
+                    const dlg = document.getElementById('ttsDialog');
+                    if (dlg) dlg.checked = true;
+                    const ta = document.getElementById('ttsText');
+                    if (ta && !ta.value.trim()) {
+                        ta.value = 'Klient: Dzień dobry, szukam czegoś dla żony na urodziny.\n' +
+                                   'Sprzedawczyni: A co ona lubi? Może perfumy albo biżuteria?\n' +
+                                   'Klient: Hmm, ona zawsze narzeka, że nie mam dobrego gustu.\n' +
+                                   'Sprzedawczyni: To proszę wziąć kartę podarunkową — niech sama wybierze.';
+                    }
+                    // Seed 3 poll options
+                    if (typeof pollOptions !== 'undefined' && pollOptions.every(o => !o.text.trim())) {
+                        pollOptions.length = 0;
+                        pollOptions.push({ text: 'Klient chce kupić perfumy dla żony.', correct: false });
+                        pollOptions.push({ text: 'Sprzedawczyni proponuje kartę podarunkową, bo żona ma swój gust.', correct: true });
+                        pollOptions.push({ text: 'Klient i żona razem wybierają prezent.', correct: false });
+                        if (typeof renderPollOptions === 'function') renderPollOptions();
+                    }
+                }
+
                 if (typeof updatePollUIForTemplate === 'function') updatePollUIForTemplate();
                 drawCard();
             });

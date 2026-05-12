@@ -10,11 +10,12 @@
 
         function isPollTemplate() {
             return typeof currentTemplate !== 'undefined' &&
-                (currentTemplate === 'quiz' || currentTemplate === 'ankieta');
+                (currentTemplate === 'quiz' || currentTemplate === 'ankieta' || currentTemplate === 'sluchanie');
         }
 
         function isQuizTemplate() {
-            return typeof currentTemplate !== 'undefined' && currentTemplate === 'quiz';
+            return typeof currentTemplate !== 'undefined' &&
+                (currentTemplate === 'quiz' || currentTemplate === 'sluchanie');
         }
 
         function renderPollOptions() {
@@ -363,6 +364,95 @@
             }
         }
 
+        // ═══════════ Word-history picker (reuse old words for new content) ═══════════
+        async function openWordHistoryPicker() {
+            const ch = (typeof pubChannel !== 'undefined') ? pubChannel : 'production';
+            let modal = document.getElementById('histPickerModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'histPickerModal';
+                modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+                modal.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:520px;width:100%;padding:18px;max-height:80vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.3);">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;">' +
+                    '<h2 style="font-family:Poppins,sans-serif;color:#2E7D32;margin:0;font-size:1.1rem;">📚 Слова из истории</h2>' +
+                    '<select id="histPickerCh" style="padding:4px;border:1px solid #ddd;border-radius:5px;font-size:.8rem;">' +
+                    '<option value="production">Prod (@zabka_learn)</option><option value="debug">Debug</option></select>' +
+                    '<button onclick="document.getElementById(\'histPickerModal\').remove()" style="border:none;background:transparent;font-size:1.5rem;cursor:pointer;color:#999;">×</button>' +
+                    '</div>' +
+                    '<input type="text" id="histPickerFilter" placeholder="🔍 Фильтр..." style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:.85rem;margin-bottom:8px;box-sizing:border-box;">' +
+                    '<div id="histPickerList" style="font-size:.85rem;">Загрузка...</div></div>';
+                document.body.appendChild(modal);
+                modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+                document.getElementById('histPickerCh').value = ch;
+                document.getElementById('histPickerCh').addEventListener('change', loadWordHistoryList);
+                document.getElementById('histPickerFilter').addEventListener('input', renderHistoryFiltered);
+            }
+            await loadWordHistoryList();
+        }
+
+        let _histCachedItems = [];
+        async function loadWordHistoryList() {
+            const ch = document.getElementById('histPickerCh').value;
+            const list = document.getElementById('histPickerList');
+            list.innerHTML = 'Загрузка...';
+            try {
+                const r = await fetch('/api/word-history?channel=' + ch).then(r => r.json());
+                if (!r.ok) { list.textContent = '✗ ' + (r.error || 'Ошибка'); return; }
+                _histCachedItems = r.items || [];
+                renderHistoryFiltered();
+            } catch (e) {
+                list.textContent = '✗ ' + e.message;
+            }
+        }
+
+        function renderHistoryFiltered() {
+            const filterEl = document.getElementById('histPickerFilter');
+            const q = (filterEl?.value || '').toLowerCase().trim();
+            const list = document.getElementById('histPickerList');
+            const items = _histCachedItems.filter(it => {
+                if (!q) return true;
+                return (it.word || '').toLowerCase().includes(q) || (it.key || '').toLowerCase().includes(q);
+            });
+            if (!items.length) { list.textContent = q ? 'Ничего не найдено' : 'История пуста'; return; }
+            list.innerHTML = items.slice(0, 200).map(it => {
+                const word = (it.word || '').replace(/"/g, '&quot;');
+                const date = (it.date || '').slice(0, 10);
+                return '<div class="hist-row" data-word="' + word + '" ' +
+                       'style="padding:7px 9px;border-bottom:1px solid #eee;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" ' +
+                       'onmouseover="this.style.background=\'#f5f5f5\'" onmouseout="this.style.background=\'\'">' +
+                       '<b style="color:#2E7D32;">' + word + '</b>' +
+                       '<span style="color:#999;font-size:.78rem;">' + date + '</span></div>';
+            }).join('');
+            list.querySelectorAll('.hist-row').forEach(el => {
+                el.addEventListener('click', () => pickHistoryWord(el.dataset.word));
+            });
+        }
+
+        function pickHistoryWord(word) {
+            // Fill into main-word + close. User can craft dialog around it manually.
+            const mw = document.getElementById('main-word');
+            if (mw) {
+                mw.value = word;
+                mw.dispatchEvent(new Event('input'));
+            }
+            // If on Słuchanie template, also inject word into ttsText hint
+            if (typeof currentTemplate !== 'undefined' && currentTemplate === 'sluchanie') {
+                const ta = document.getElementById('ttsText');
+                if (ta) {
+                    ta.value = 'Anna: Słyszałeś, jak dziś szef użył słowa "' + word + '"?\n' +
+                               'Marek: Tak, ale chyba nie do końca rozumiem, co miał na myśli.\n' +
+                               'Anna: To znaczy [впиши значение в контексте].\n' +
+                               'Marek: A, teraz jasne. Dzięki za wyjaśnienie!';
+                }
+            }
+            if (typeof drawCard === 'function') drawCard();
+            if (typeof pubAutoText === 'function') pubAutoText();
+            const m = document.getElementById('histPickerModal');
+            if (m) m.remove();
+            if (typeof pubToast === 'function') pubToast('Загружено: ' + word, 'ok');
+        }
+
+        window.openWordHistoryPicker = openWordHistoryPicker;
         window.ttsPreview = ttsPreview;
         window.ttsTestAll = ttsTestAll;
         window.getTtsPayload = getTtsPayload;
