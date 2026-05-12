@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Polski Daily Card Generator Bot
-Telegram bot with captcha that provides the latest editor version
-Auto-notifies users when new version is deployed
-+ Quiz/Test functionality with progress tracking
+Żabka Learn quiz bot.
+Captcha-gated quiz/test feature with per-user progress tracking.
+(Editor moved to web — bot no longer distributes HTML or version news.)
 """
 
 import os
@@ -26,25 +25,13 @@ from telegram.ext import (
 
 # Configuration
 BOT_TOKEN = os.environ["BOT_TOKEN"]
-EDITOR_FILE = os.path.join(os.path.dirname(__file__), "index.html")
 USERS_FILE = os.path.join(os.path.dirname(__file__), "users.json")
-VERSION_FILE = os.path.join(os.path.dirname(__file__), "last_version.txt")
 DB_FILE = os.path.join(os.path.dirname(__file__), "quiz.db")
 
-# Separate versions for editor and quiz
-EDITOR_VERSION = "2.12"
-QUIZ_VERSION = "2.12"  # Split into smaller quizzes + better formatting
-EDITOR_CHANGELOG = """• 6 новых декораций: снежинки, точки, кольца, листья, бриллианты, волны
-• Кнопка «Случайно» — выбирает 1-3 случайных декорации"""
-
-# Editor password protection
-EDITOR_PASSWORD = os.environ["EDITOR_PASSWORD"]
+QUIZ_VERSION = "2.13"
 
 # Store pending captchas: {user_id: {"answer": int, "attempts": int}}
 pending_captchas = {}
-
-# Store pending editor password requests: {user_id: True}
-pending_editor_password = {}
 
 # Rate limiting for button presses: {user_id: {"last_click": timestamp, "action": str}}
 rate_limit = {}
@@ -615,81 +602,6 @@ def add_user(user_id):
     save_users(users)
 
 
-def get_last_version():
-    """Get last deployed version"""
-    if os.path.exists(VERSION_FILE):
-        try:
-            with open(VERSION_FILE, "r") as f:
-                return f.read().strip()
-        except:
-            return None
-    return None
-
-
-def save_last_version(version):
-    """Save current version as last deployed"""
-    with open(VERSION_FILE, "w") as f:
-        f.write(version)
-
-
-async def notify_new_version(bot):
-    """Send notification about new EDITOR version only (not quiz updates)"""
-    last_version = get_last_version()
-
-    if last_version == EDITOR_VERSION:
-        print(f"📦 Версия редактора не изменилась (v{EDITOR_VERSION}), рассылка не нужна")
-        return
-
-    users = load_users()
-    if not users:
-        print("📭 Нет пользователей для рассылки")
-        save_last_version(EDITOR_VERSION)
-        return
-
-    print(f"🚀 Новая версия редактора v{EDITOR_VERSION} (было: {last_version or 'первый запуск'})")
-    print(f"📤 Рассылка {len(users)} пользователям...")
-
-    keyboard = [
-        [InlineKeyboardButton(
-            f"📥 Скачать v{EDITOR_VERSION}",
-            callback_data="get_editor"
-        )],
-        [InlineKeyboardButton(
-            "📝 Тесты",
-            callback_data="quiz_menu"
-        )],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    warsaw_time = datetime.now(pytz.timezone('Europe/Warsaw')).strftime('%d.%m.%Y %H:%M')
-
-    message = (
-        f"🚀 **Вышла новая версия редактора v{EDITOR_VERSION}!**\n\n"
-        f"📝 **Что нового:**\n{EDITOR_CHANGELOG}\n\n"
-        f"📅 {warsaw_time} (Warszawa)"
-    )
-
-    sent = 0
-    failed = 0
-
-    for uid in users:
-        try:
-            await bot.send_message(
-                chat_id=uid,
-                text=message,
-                reply_markup=reply_markup,
-                parse_mode="Markdown"
-            )
-            sent += 1
-        except Exception as e:
-            failed += 1
-
-        await asyncio.sleep(0.05)
-
-    print(f"✅ Рассылка завершена: отправлено {sent}, ошибок {failed}")
-    save_last_version(EDITOR_VERSION)
-
-
 def check_rate_limit(user_id: int, action: str) -> bool:
     """Check if user is clicking too fast. Returns True if should block."""
     import time
@@ -777,20 +689,6 @@ async def handle_message(update, context):
     user_id = update.effective_user.id
     text = update.message.text.strip()
 
-    # Check for editor password
-    if user_id in pending_editor_password:
-        del pending_editor_password[user_id]
-        if text.lower() == EDITOR_PASSWORD.lower():
-            await update.message.reply_text("✅ Пароль верный!")
-            await send_editor_file(update.message, user_id)
-        else:
-            await update.message.reply_text(
-                "❌ Неверный пароль!\n\n"
-                "Попробуй ещё раз: нажми кнопку «Редактор» в меню.",
-                reply_markup=get_main_menu_keyboard()
-            )
-        return
-
     # Check for captcha
     if user_id not in pending_captchas:
         if user_id in load_users():
@@ -864,78 +762,6 @@ async def test_command(update, context):
         return
 
     await show_quiz_menu(update.message, user_id)
-
-
-async def editor_command(update, context):
-    """Handle /editor command - ask for password"""
-    user_id = update.effective_user.id
-
-    if user_id not in load_users():
-        await update.message.reply_text("Сначала пройди проверку: /start")
-        return
-
-    # Ask for password
-    pending_editor_password[user_id] = True
-    await update.message.reply_text(
-        "🔐 **Доступ к редактору**\n\n"
-        "Введи пароль:",
-        parse_mode="Markdown"
-    )
-
-
-def build_standalone_editor_html():
-    """Inline split CSS/JS modules into the index.html shell so the file
-    works standalone when downloaded (no server-relative /static fetches)."""
-    base = os.path.dirname(__file__)
-    static_dir = os.path.join(base, "static")
-    with open(EDITOR_FILE, "r", encoding="utf-8") as f:
-        html = f.read()
-
-    css_link = '<link rel="stylesheet" href="/static/css/editor.css">'
-    if css_link in html:
-        with open(os.path.join(static_dir, "css", "editor.css"), "r", encoding="utf-8") as f:
-            css = f.read()
-        html = html.replace(css_link, f"<style>\n{css}\n</style>")
-
-    import re as _re
-    js_files = sorted(
-        f for f in os.listdir(os.path.join(static_dir, "js"))
-        if f.endswith(".js")
-    )
-    chunks = []
-    for name in js_files:
-        with open(os.path.join(static_dir, "js", name), "r", encoding="utf-8") as f:
-            chunks.append(f"// === inlined: {name} ===\n{f.read()}")
-    # Single <script> tag so top-level const/let bindings are shared across modules.
-    bundled = "<script>\n" + "\n".join(chunks) + "\n</script>"
-    replacement = "\n    " + bundled
-    html = _re.sub(
-        r'(?:\s*<script src="/static/js/[^"]+"></script>)+',
-        lambda _m: replacement,
-        html,
-    )
-    return html
-
-
-async def send_editor_file(message, user_id):
-    """Send editor file to user (inlined to single self-contained HTML)."""
-    try:
-        html = build_standalone_editor_html()
-        from io import BytesIO
-        buf = BytesIO(html.encode("utf-8"))
-        buf.name = f"polski-daily-card-generator-v{EDITOR_VERSION}.html"
-        await message.reply_document(
-            document=buf,
-            filename=buf.name,
-            caption=(
-                f"🐸 **Polski Daily Card Generator v{EDITOR_VERSION}**\n\n"
-                f"📅 Дата: {datetime.now(pytz.timezone('Europe/Warsaw')).strftime('%d.%m.%Y %H:%M')} (Warszawa)\n\n"
-                "Открой файл в браузере и создавай карточки!"
-            ),
-            parse_mode="Markdown"
-        )
-    except FileNotFoundError:
-        await message.reply_text("❌ Файл редактора не найден.")
 
 
 async def show_quiz_menu(message, user_id):
@@ -1260,9 +1086,9 @@ async def button_callback(update, context):
 async def version_command(update, context):
     """Handle /version command"""
     await update.message.reply_text(
-        f"🐸 **Версии Polski Daily Bot:**\n\n"
-        f"📥 Редактор: v{EDITOR_VERSION}\n"
-        f"📝 Тесты: v{QUIZ_VERSION}",
+        f"🐸 **Żabka Learn Bot**\n\n"
+        f"📝 Тесты: v{QUIZ_VERSION}\n"
+        f"🌐 Редактор: web-only",
         parse_mode="Markdown"
     )
 
@@ -1278,7 +1104,7 @@ async def post_init(application):
 
 def main():
     """Start the bot"""
-    print(f"🐸 Запуск Polski Daily Bot (Редактор v{EDITOR_VERSION}, Тесты v{QUIZ_VERSION})...")
+    print(f"🐸 Запуск Żabka Learn Bot (Тесты v{QUIZ_VERSION})...")
 
     app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
 
@@ -1286,7 +1112,6 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("menu", menu_command))
     app.add_handler(CommandHandler("test", test_command))
-    app.add_handler(CommandHandler("editor", editor_command))
     app.add_handler(CommandHandler("version", version_command))
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
