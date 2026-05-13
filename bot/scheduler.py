@@ -816,21 +816,52 @@ def _ffmpeg_concat_to_ogg(segments_mp3: list) -> bytes:
             return f.read()
 
 
+async def _synth_one_with_retry(provider: str, text: str, voice: str, retries: int = 2):
+    """Synthesize a single line with exponential backoff. Returns bytes or None."""
+    delay = 0.5
+    for attempt in range(retries + 1):
+        audio = await _dispatch_synth(provider, text, voice=voice, rate_pct=0, fmt="mp3")
+        if audio:
+            return audio
+        if attempt < retries:
+            log.warning("TTS synth attempt %d/%d failed for line '%s', retrying in %.1fs",
+                        attempt + 1, retries + 1, text[:40], delay)
+            await asyncio.sleep(delay)
+            delay *= 2
+    return None
+
+
 async def _synth_dialogue_lines(lines, provider: str = "elevenlabs"):
     """Synthesize explicit list of (voice_id, text) lines into single OGG/Opus.
-    Skips empty/voiceless rows. Concat via ffmpeg with 350ms silence between.
+    Fail-fast: if any non-empty line fails to synthesize, return None (caller logs).
+    This prevents partial-dialogue voice notes silently going out.
     """
-    mp3_chunks = []
+    valid_lines = []
     for ln in lines or []:
         text = (ln.get("text") or "").strip()
         voice = (ln.get("voice") or "").strip()
         if not text or not voice:
             continue
-        audio = await _dispatch_synth(provider, text, voice=voice, rate_pct=0, fmt="mp3")
+        valid_lines.append((text, voice))
+
+    if not valid_lines:
+        return None
+
+    mp3_chunks = []
+    failed = []
+    for text, voice in valid_lines:
+        audio = await _synth_one_with_retry(provider, text, voice)
         if audio:
             mp3_chunks.append(audio)
-    if not mp3_chunks:
+        else:
+            failed.append({"voice": voice, "text": text[:80]})
+            log.error("TTS line PERMANENTLY failed after retries: voice=%s text='%s'", voice, text[:80])
+
+    if failed:
+        log.error("Dialogue synth aborted: %d/%d lines failed (%s). Voice note will NOT be sent.",
+                  len(failed), len(valid_lines), failed)
         return None
+
     try:
         return await asyncio.get_event_loop().run_in_executor(None, _ffmpeg_concat_to_ogg, mp3_chunks)
     except subprocess.CalledProcessError as e:
@@ -847,14 +878,19 @@ async def _synth_dialogue(text: str, provider: str = "elevenlabs", voice_pool: d
     assignments = _assign_dialogue_voices(segments, provider, pool)
 
     mp3_chunks = []
+    failed = []
     for sp_raw, voice_id, line in assignments:
         if not line:
             continue
-        audio = await _dispatch_synth(provider, line, voice=voice_id, rate_pct=0, fmt="mp3")
+        audio = await _synth_one_with_retry(provider, line, voice_id)
         if audio:
             mp3_chunks.append(audio)
         else:
-            log.warning("Dialogue segment failed for speaker '%s'", sp_raw)
+            failed.append(sp_raw)
+            log.error("Dialogue segment PERMANENTLY failed for speaker '%s' text='%s'", sp_raw, line[:80])
+    if failed:
+        log.error("Dialogue synth aborted: %d segments failed (%s). No voice note.", len(failed), failed)
+        return None
     if not mp3_chunks:
         return None
     # Run ffmpeg in thread (subprocess is blocking)

@@ -599,8 +599,12 @@
                 btn.disabled = true;
                 btn.textContent = 'Отправка…';
                 try {
-                    const exportCanvas = drawCard(true);
-                    const imageData = exportCanvas.toDataURL('image/png');
+                    const withImage = document.getElementById('pubWithImage')?.checked !== false;
+                    let imageData = null;
+                    if (withImage) {
+                        const exportCanvas = drawCard(true);
+                        imageData = exportCanvas.toDataURL('image/png');
+                    }
                     // Use editor's current values (user may have edited) for safety
                     const word = document.getElementById('main-word').value.trim() || card.word;
                     const translation = document.getElementById('translation').value.trim() || card.translation;

@@ -26,6 +26,12 @@
                     document.getElementById('badge-text').value = btn.dataset.badge;
                 }
 
+                // Quiz / Słuchanie / Ankieta: poll-only posts → no card image by default
+                if (['quiz', 'ankieta', 'sluchanie'].includes(currentTemplate)) {
+                    const imgCb = document.getElementById('pubWithImage');
+                    if (imgCb) imgCb.checked = false;
+                }
+
                 // Słuchanie: auto-enable TTS dialog mode + pre-fill defaults
                 if (currentTemplate === 'sluchanie') {
                     const word = document.getElementById('main-word');
