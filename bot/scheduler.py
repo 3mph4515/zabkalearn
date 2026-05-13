@@ -1023,7 +1023,9 @@ async def handle_tts_preview(request):
     except Exception:
         return web.json_response({"ok": False, "error": "Bad JSON"}, status=400)
     text = (data.get("text") or "").strip()
-    if not text:
+    lines_raw = data.get("lines")
+    has_lines = bool(lines_raw) and isinstance(lines_raw, list) and any((l or {}).get("text") for l in lines_raw)
+    if not text and not has_lines:
         return web.json_response({"ok": False, "error": "Empty text"}, status=400)
     voice = data.get("voice") or AZURE_TTS_DEFAULT_VOICE
     try:
