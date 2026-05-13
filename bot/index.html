@@ -2,628 +2,639 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Polski Daily | Card Generator | EMMA POLOZHI BLAT KURICY</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Montserrat:wght@400;600;700&family=Roboto:wght@400;500;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4CAF50">
+    <title>Żabka Learn · Card Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Montserrat:wght@500;600;700&family=Roboto:wght@400;500;700&family=Playfair+Display:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/editor.css">
 </head>
 <body>
-    <button class="theme-toggle" id="theme-toggle" title="Тёмная тема">🌙</button>
+    <div class="app">
 
-    <div class="container">
-        <h1>Polski Daily | Card Generator <span class="version">v2.15</span></h1>
-
-        <div class="panel controls-panel settings-panel">
-            <h2>Настройки карточки</h2>
-
-            <div class="presets-bar">
-                <button class="preset-btn save-preset" onclick="savePreset()">💾 Сохранить</button>
-                <button class="preset-btn" onclick="loadPreset(1)">1</button>
-                <button class="preset-btn" onclick="loadPreset(2)">2</button>
-                <button class="preset-btn" onclick="loadPreset(3)">3</button>
-                <button class="preset-btn" onclick="clearPresets()">🗑️</button>
-                <button class="preset-btn" onclick="openQueueModal()" style="margin-left:auto;background:#fff3e0;color:#e65100;border-color:#ffb74d;">📋 Очередь</button>
+        <header class="app-head">
+            <h1>
+                <span class="brand-emoji">🐸</span>
+                Card Studio
+                <span class="ver-pill">v3</span>
+            </h1>
+            <div class="head-actions">
+                <button class="icon-btn" id="theme-toggle" title="Тёмная тема" type="button">🌙</button>
             </div>
+        </header>
 
-            <div class="template-selector">
-                <button class="template-btn active" data-template="ciekawostka" data-badge="CIEKAWOSTKA DNIA">
-                    <span class="icon">🧠</span>
-                    <span class="name">Ciekawostka</span>
-                </button>
-                <button class="template-btn" data-template="slowo" data-badge="SŁOWO DNIA">
-                    <span class="icon">🇵🇱</span>
-                    <span class="name">Słowo dnia</span>
-                </button>
-                <button class="template-btn" data-template="quiz" data-badge="QUIZ TIME">
-                    <span class="icon">❓</span>
-                    <span class="name">Quiz</span>
-                </button>
-                <button class="template-btn" data-template="ankieta" data-badge="ANKIETA">
-                    <span class="icon">📊</span>
-                    <span class="name">Ankieta</span>
-                </button>
-                <button class="template-btn" data-template="sluchanie" data-badge="SŁUCHANIE">
-                    <span class="icon">🎧</span>
-                    <span class="name">Słuchanie</span>
-                </button>
-                <button class="template-btn" data-template="blad" data-badge="BŁĄD DNIA">
-                    <span class="icon">⚠️</span>
-                    <span class="name">Błąd dnia</span>
-                </button>
-                <button class="template-btn" data-template="podsluchano" data-badge="PODSLUCHANO W ŻABCE">
-                    <span class="icon">👂</span>
-                    <span class="name">Podsluchano</span>
-                </button>
-                <button class="template-btn" data-template="gramatyka" data-badge="GRAMATYKA">
-                    <span class="icon">📝</span>
-                    <span class="name">Gramatyka</span>
-                </button>
-                <button class="template-btn" data-template="custom" data-badge="">
-                    <span class="icon">✏️</span>
-                    <span class="name">Своя</span>
-                </button>
-            </div>
+        <main class="app-main">
 
-            <div class="controls-grid">
-            <div class="col-left">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-                <div class="form-group">
-                    <label>Заголовок шапки</label>
-                    <input type="text" id="header-title" value="Польский язык на каждый день">
+            <!-- ═══════════════ CONTROLS ═══════════════ -->
+            <section class="surface panel--controls" aria-label="Настройки">
+
+                <div class="presets-bar">
+                    <button class="preset-btn is-save" type="button" onclick="savePreset()">💾 Сохранить</button>
+                    <button class="preset-btn" type="button" onclick="loadPreset(1)">1</button>
+                    <button class="preset-btn" type="button" onclick="loadPreset(2)">2</button>
+                    <button class="preset-btn" type="button" onclick="loadPreset(3)">3</button>
+                    <button class="preset-btn" type="button" onclick="clearPresets()" title="Очистить пресеты">🗑</button>
+                    <button class="preset-btn is-queue" type="button" onclick="openQueueModal()">📋 Очередь</button>
                 </div>
-                <div class="form-group">
-                    <label>Юзернейм (футер)</label>
-                    <input type="text" id="footer-username" value="@Polski_Daily">
+
+                <h2>Шаблон</h2>
+                <div class="tile-grid tile-grid--templates" id="templates">
+                    <button class="tile template-btn active" data-template="ciekawostka" data-badge="CIEKAWOSTKA DNIA" type="button">
+                        <span class="ico">🧠</span>
+                        <span class="lbl">Ciekawostka</span>
+                    </button>
+                    <button class="tile template-btn" data-template="slowo" data-badge="SŁOWO DNIA" type="button">
+                        <span class="ico">🇵🇱</span>
+                        <span class="lbl">Słowo dnia</span>
+                    </button>
+                    <button class="tile template-btn" data-template="quiz" data-badge="QUIZ TIME" type="button">
+                        <span class="ico">❓</span>
+                        <span class="lbl">Quiz</span>
+                    </button>
+                    <button class="tile template-btn" data-template="ankieta" data-badge="ANKIETA" type="button">
+                        <span class="ico">📊</span>
+                        <span class="lbl">Ankieta</span>
+                    </button>
+                    <button class="tile template-btn" data-template="sluchanie" data-badge="SŁUCHANIE" type="button">
+                        <span class="ico">🎧</span>
+                        <span class="lbl">Słuchanie</span>
+                    </button>
+                    <button class="tile template-btn" data-template="blad" data-badge="BŁĄD DNIA" type="button">
+                        <span class="ico">⚠️</span>
+                        <span class="lbl">Błąd dnia</span>
+                    </button>
+                    <button class="tile template-btn" data-template="podsluchano" data-badge="PODSLUCHANO W ŻABCE" type="button">
+                        <span class="ico">👂</span>
+                        <span class="lbl">Podsluchano</span>
+                    </button>
+                    <button class="tile template-btn" data-template="gramatyka" data-badge="GRAMATYKA" type="button">
+                        <span class="ico">📝</span>
+                        <span class="lbl">Gramatyka</span>
+                    </button>
+                    <button class="tile template-btn" data-template="custom" data-badge="" type="button">
+                        <span class="ico">✏️</span>
+                        <span class="lbl">Своя</span>
+                    </button>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label>Рубрика (badge)</label>
-                <input type="text" id="badge-text" value="CIEKAWOSTKA DNIA">
-            </div>
+                <h2 style="margin-top:var(--s-4)">Контент</h2>
 
-            <div class="form-group">
-                <label>Главное слово/фраза</label>
-                <textarea id="main-word" rows="2">Zmierzchnica trupia główka</textarea>
-            </div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-                <div class="form-group" id="transcription-group" style="display: none;">
-                    <label>Транскрипция</label>
-                    <textarea id="transcription" rows="1" placeholder="[пшепрашам]"></textarea>
-                </div>
-                <div class="form-group" id="translation-group" style="display: none;">
-                    <label>Перевод</label>
-                    <textarea id="translation" rows="1" placeholder="Извините"></textarea>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>Подзаголовок/вопрос</label>
-                <textarea id="subtitle" rows="2">Jak myślicie, co to jest?</textarea>
-            </div>
-
-            <div class="form-group" id="example-group" style="display: none;">
-                <label>Примеры использования <span style="color:#999;font-weight:normal;">(до 3)</span></label>
-                <div id="examples-list">
-                    <div class="example-item" data-idx="0">
-                        <textarea class="example-input" id="example" rows="2" placeholder="Przepraszam, gdzie jest Żabka?"></textarea>
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="header-title">Заголовок шапки</label>
+                        <input type="text" id="header-title" value="Польский язык на каждый день">
+                    </div>
+                    <div class="field">
+                        <label for="footer-username">Юзернейм (футер)</label>
+                        <input type="text" id="footer-username" value="@Polski_Daily">
                     </div>
                 </div>
-                <button type="button" id="add-example-btn" onclick="addExample()"
-                  style="margin-top:6px;padding:6px 10px;border:1px dashed #4CAF50;background:transparent;color:#2E7D32;border-radius:6px;cursor:pointer;font-size:.8rem;">
-                  + Добавить пример
-                </button>
-                <div style="display:flex;align-items:center;gap:4px;margin-top:4px;">
-                    <label style="font-size:.7rem;color:#888;margin:0;">Цвет блока:</label>
-                    <input type="color" id="example-block-color" value="#E8F5E9" style="width:24px;height:24px;border:1px solid #ddd;border-radius:4px;padding:0;cursor:pointer;">
-                    <button type="button" data-ebc="#E8F5E9" class="ebc-preset" style="width:18px;height:18px;border-radius:4px;border:1px solid #ddd;background:#E8F5E9;cursor:pointer;padding:0;" onclick="setExBlockColor(this.dataset.ebc)"></button>
-                    <button type="button" data-ebc="#E3F2FD" class="ebc-preset" style="width:18px;height:18px;border-radius:4px;border:1px solid #ddd;background:#E3F2FD;cursor:pointer;padding:0;" onclick="setExBlockColor(this.dataset.ebc)"></button>
-                    <button type="button" data-ebc="#FFF3E0" class="ebc-preset" style="width:18px;height:18px;border-radius:4px;border:1px solid #ddd;background:#FFF3E0;cursor:pointer;padding:0;" onclick="setExBlockColor(this.dataset.ebc)"></button>
-                    <button type="button" data-ebc="#FCE4EC" class="ebc-preset" style="width:18px;height:18px;border-radius:4px;border:1px solid #ddd;background:#FCE4EC;cursor:pointer;padding:0;" onclick="setExBlockColor(this.dataset.ebc)"></button>
-                    <button type="button" data-ebc="#F3E5F5" class="ebc-preset" style="width:18px;height:18px;border-radius:4px;border:1px solid #ddd;background:#F3E5F5;cursor:pointer;padding:0;" onclick="setExBlockColor(this.dataset.ebc)"></button>
-                    <button type="button" data-ebc="#FFFDE7" class="ebc-preset" style="width:18px;height:18px;border-radius:4px;border:1px solid #ddd;background:#FFFDE7;cursor:pointer;padding:0;" onclick="setExBlockColor(this.dataset.ebc)"></button>
-                    <button type="button" data-ebc="#ECEFF1" class="ebc-preset" style="width:18px;height:18px;border-radius:4px;border:1px solid #ddd;background:#ECEFF1;cursor:pointer;padding:0;" onclick="setExBlockColor(this.dataset.ebc)"></button>
-                </div>
-            </div>
 
-            <div class="form-group" id="quiz-options-group" style="display: none;">
-                <label>
-                    Варианты ответа
-                    <span class="poll-hint" id="poll-mode-hint">⓵ выбери правильный</span>
-                </label>
-                <div id="poll-options-list"></div>
-                <button type="button" id="add-poll-option-btn" onclick="addPollOption()"
-                  style="margin-top:6px;padding:6px 10px;border:1px dashed #4CAF50;background:transparent;color:#2E7D32;border-radius:6px;cursor:pointer;font-size:.8rem;">
-                  + Добавить вариант
-                </button>
-
-                <div class="form-group" id="poll-solution-group" style="margin-top:10px;">
-                    <label>Объяснение / правильный ответ
-                        <span class="poll-hint">отправится reply под спойлером</span>
-                    </label>
-                    <textarea id="poll-solution" rows="2" placeholder="«Sklep» = магазин (а не склеп!) 🐸" maxlength="200"></textarea>
+                <div class="field">
+                    <label for="badge-text">Рубрика (badge)</label>
+                    <input type="text" id="badge-text" value="CIEKAWOSTKA DNIA">
                 </div>
 
-                <div class="poll-config-row">
-                    <label class="poll-toggle">
-                        <input type="checkbox" id="poll-as-tg" checked>
-                        <span>Отправить как Telegram-опрос/quiz</span>
-                    </label>
-                    <label class="poll-toggle" id="poll-multi-row" style="display:none;">
-                        <input type="checkbox" id="poll-multiple"> Множественный выбор
-                    </label>
-                    <label class="poll-toggle">
-                        <input type="checkbox" id="poll-anonymous" checked> Анонимный
-                    </label>
-                    <label class="poll-toggle">
-                        Закрыть через:
-                        <select id="poll-close-period">
-                            <option value="0">Никогда</option>
-                            <option value="3600">1 час</option>
-                            <option value="21600">6 часов</option>
-                            <option value="86400" selected>24 часа</option>
-                            <option value="604800">1 неделя</option>
-                        </select>
-                    </label>
+                <div class="field">
+                    <label for="main-word">Главное слово / фраза</label>
+                    <textarea id="main-word" rows="2">Zmierzchnica trupia główka</textarea>
                 </div>
-            </div>
-            </div>
 
-            <div class="col-right">
-            <details class="options-section" open>
-                <summary>🎨 Оформление</summary>
-                <div class="options-content">
-                    <button type="button" onclick="randomStyle()" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:.78rem;margin-bottom:8px;transition:all .12s;" onmouseover="this.style.borderColor='#4CAF50';this.style.background='#E8F5E9'" onmouseout="this.style.borderColor='#ddd';this.style.background='#fff'">🎲 Random style</button>
-                    <div class="form-group">
-                        <label>Цвет бейджа</label>
-                        <div class="color-picker-row">
-                            <input type="color" id="badge-color" value="#E53935">
-                            <input type="text" id="badge-color-text" value="#E53935">
+                <div class="field-grid">
+                    <div class="field" id="transcription-group">
+                        <label for="transcription">Транскрипция</label>
+                        <textarea id="transcription" rows="1" placeholder="[пшепрашам]"></textarea>
+                    </div>
+                    <div class="field" id="translation-group">
+                        <label for="translation">Перевод</label>
+                        <textarea id="translation" rows="1" placeholder="Извините"></textarea>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="subtitle">Подзаголовок / вопрос</label>
+                    <textarea id="subtitle" rows="2">Jak myślicie, co to jest?</textarea>
+                </div>
+
+                <div class="field" id="example-group">
+                    <label>Примеры использования <span class="muted small">(до 3)</span></label>
+                    <div id="examples-list">
+                        <div class="example-item" data-idx="0">
+                            <textarea class="example-input" id="example" rows="2" placeholder="Przepraszam, gdzie jest Żabka?"></textarea>
                         </div>
                     </div>
+                    <button type="button" id="add-example-btn" class="add-inline-btn" onclick="addExample()">+ Пример</button>
+                    <div class="ebc-row">
+                        <label>Цвет блока:</label>
+                        <input type="color" id="example-block-color" value="#E8F5E9">
+                        <button type="button" class="ebc-preset" data-ebc="#E8F5E9" style="background:#E8F5E9" onclick="setExBlockColor(this.dataset.ebc)"></button>
+                        <button type="button" class="ebc-preset" data-ebc="#E3F2FD" style="background:#E3F2FD" onclick="setExBlockColor(this.dataset.ebc)"></button>
+                        <button type="button" class="ebc-preset" data-ebc="#FFF3E0" style="background:#FFF3E0" onclick="setExBlockColor(this.dataset.ebc)"></button>
+                        <button type="button" class="ebc-preset" data-ebc="#FCE4EC" style="background:#FCE4EC" onclick="setExBlockColor(this.dataset.ebc)"></button>
+                        <button type="button" class="ebc-preset" data-ebc="#F3E5F5" style="background:#F3E5F5" onclick="setExBlockColor(this.dataset.ebc)"></button>
+                        <button type="button" class="ebc-preset" data-ebc="#FFFDE7" style="background:#FFFDE7" onclick="setExBlockColor(this.dataset.ebc)"></button>
+                        <button type="button" class="ebc-preset" data-ebc="#ECEFF1" style="background:#ECEFF1" onclick="setExBlockColor(this.dataset.ebc)"></button>
+                    </div>
+                </div>
 
-                    <div class="form-group">
-                        <label>Цвет фона</label>
-                    <div class="color-picker-row">
-                        <input type="color" id="bg-color" value="#E8F5E9">
-                        <input type="text" id="bg-color-text" value="#E8F5E9">
-                    </div>
-                    <div class="color-presets">
-                        <button type="button" class="color-preset" data-color="#E8F5E9" style="background:#E8F5E9"></button>
-                        <button type="button" class="color-preset" data-color="#FFF3E0" style="background:#FFF3E0"></button>
-                        <button type="button" class="color-preset" data-color="#E3F2FD" style="background:#E3F2FD"></button>
-                        <button type="button" class="color-preset" data-color="#FCE4EC" style="background:#FCE4EC"></button>
-                        <button type="button" class="color-preset" data-color="#F3E5F5" style="background:#F3E5F5"></button>
-                        <button type="button" class="color-preset" data-color="#FFFDE7" style="background:#FFFDE7"></button>
-                    </div>
-                    <div class="gradient-options" style="margin-top: 8px;">
-                        <label class="decor-option"><input type="checkbox" id="use-gradient"> Градиент</label>
-                        <div id="gradient-controls" style="display: none; margin-top: 6px;">
-                            <div class="color-picker-row" style="margin-bottom: 4px;">
-                                <input type="color" id="bg-color-2" value="#C8E6C9">
-                                <select id="gradient-direction" style="flex:1; padding: 6px; border-radius: 6px; border: 2px solid #e0e0e0;">
-                                    <option value="to bottom">↓ Вниз</option>
-                                    <option value="to top">↑ Вверх</option>
-                                    <option value="to right">→ Вправо</option>
-                                    <option value="to left">← Влево</option>
-                                    <option value="to bottom right">↘ По диагонали</option>
-                                    <option value="to top right">↗ По диагонали</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <label class="decor-option" style="margin-top: 6px;"><input type="checkbox" id="no-bg"> Прозрачный</label>
+                <!-- Poll/Quiz options (visible for quiz/ankieta/sluchanie) -->
+                <div class="field" id="quiz-options-group">
+                    <label>
+                        Варианты ответа
+                        <span class="poll-hint" id="poll-mode-hint">⓵ выбери правильный</span>
+                    </label>
+                    <div id="poll-options-list"></div>
+                    <button type="button" id="add-poll-option-btn" class="add-inline-btn" onclick="addPollOption()">+ Вариант</button>
+
+                    <div class="field" id="poll-solution-group" style="margin-top:var(--s-3)">
+                        <label>
+                            Объяснение / правильный ответ
+                            <span class="poll-hint">отправится reply под спойлером</span>
+                        </label>
+                        <textarea id="poll-solution" rows="2" placeholder="«Sklep» = магазин (а не склеп!) 🐸" maxlength="200"></textarea>
                     </div>
 
-                    <div class="form-group">
-                        <label>Фон-картинка</label>
-                        <div class="image-upload-area" id="image-upload-area">
-                            <input type="file" id="bg-image" accept="image/*" style="display: none;">
-                            <div class="upload-placeholder" id="upload-placeholder">
-                                <span class="upload-icon">🖼️</span>
-                                <span>Загрузить</span>
-                            </div>
-                            <div class="upload-preview" id="upload-preview" style="display: none;">
-                                <img id="preview-thumb" src="">
-                                <button type="button" class="remove-image" id="remove-image">✕</button>
-                            </div>
-                        </div>
-                        <div class="image-options" id="image-options" style="display: none;">
-                            <div class="option-row">
-                                <label>Затемнение: <span id="overlay-value">40%</span></label>
-                                <input type="range" id="overlay-opacity" min="0" max="80" value="40">
-                            </div>
-                            <div class="option-row">
-                                <label>Тень текста: <span id="text-shadow-value">70%</span></label>
-                                <input type="range" id="text-shadow-intensity" min="0" max="100" value="70">
-                            </div>
-                            <div class="option-row">
-                                <div class="overlay-colors">
-                                    <button type="button" class="overlay-color-btn active" data-overlay="black" style="background: #000;">⬛</button>
-                                    <button type="button" class="overlay-color-btn" data-overlay="green" style="background: #2E7D32;">🟩</button>
-                                    <button type="button" class="overlay-color-btn" data-overlay="white" style="background: #fff; color: #333;">⬜</button>
-                                </div>
-                                <div class="fit-selector">
-                                    <button type="button" class="fit-btn active" data-fit="cover">Fill</button>
-                                    <button type="button" class="fit-btn" data-fit="contain">Fit</button>
+                    <div class="poll-config">
+                        <label class="poll-toggle">
+                            <input type="checkbox" id="poll-as-tg" checked>
+                            <span>Отправить как Telegram-опрос</span>
+                        </label>
+                        <label class="poll-toggle" id="poll-multi-row">
+                            <input type="checkbox" id="poll-multiple"> Множественный
+                        </label>
+                        <label class="poll-toggle">
+                            <input type="checkbox" id="poll-anonymous" checked> Анонимный
+                        </label>
+                        <label class="poll-toggle">
+                            Закрыть через:
+                            <select id="poll-close-period">
+                                <option value="0">Никогда</option>
+                                <option value="3600">1 час</option>
+                                <option value="21600">6 часов</option>
+                                <option value="86400" selected>24 часа</option>
+                                <option value="604800">1 неделя</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+
+                <details class="section" open>
+                    <summary>🎨 Оформление</summary>
+                    <div class="section-body">
+
+                        <button type="button" class="btn btn--full btn--sm" onclick="randomStyle()" style="margin-bottom:var(--s-3)">🎲 Random style</button>
+
+                        <div class="field-grid">
+                            <div class="field">
+                                <label>Цвет бейджа</label>
+                                <div class="color-row">
+                                    <input type="color" id="badge-color" value="#E53935">
+                                    <input type="text" id="badge-color-text" value="#E53935">
                                 </div>
                             </div>
-                            <div class="option-row">
-                                <label class="decor-option"><input type="checkbox" id="text-outline" checked> Обводка текста</label>
+                            <div class="field">
+                                <label>Цвет фона</label>
+                                <div class="color-row">
+                                    <input type="color" id="bg-color" value="#E8F5E9">
+                                    <input type="text" id="bg-color-text" value="#E8F5E9">
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="form-group">
-                        <label>Маскот</label>
-                        <div class="mascot-selector">
-                            <button type="button" class="mascot-btn active" data-mascot="happy" title="Happy - friendly">😊</button>
-                            <button type="button" class="mascot-btn" data-mascot="thinking" title="Thinking - hmm...">🤔</button>
-                            <button type="button" class="mascot-btn" data-mascot="surprised" title="Surprised - wow!">😮</button>
-                            <button type="button" class="mascot-btn" data-mascot="wink" title="Wink - hint">😉</button>
-                            <button type="button" class="mascot-btn" data-mascot="love" title="Love - heart eyes">😍</button>
-                            <button type="button" class="mascot-btn" data-mascot="cool" title="Cool - sunglasses">😎</button>
-                            <button type="button" class="mascot-btn" data-mascot="sad" title="Sad - tear">😢</button>
-                            <button type="button" class="mascot-btn" data-mascot="angry" title="Angry - mad">😠</button>
-                            <button type="button" class="mascot-btn" data-mascot="sleepy" title="Sleepy - zzz">😴</button>
-                            <button type="button" class="mascot-btn" data-mascot="laugh" title="Laugh - haha">😂</button>
-                            <button type="button" class="mascot-btn" data-mascot="nerd" title="Nerd - glasses">🤓</button>
-                            <button type="button" class="mascot-btn" data-mascot="party" title="Party - hat">🥳</button>
-                            <button type="button" class="mascot-btn" data-mascot="zany" title="Zany - crazy tongue">🤪</button>
-                            <button type="button" class="mascot-btn" data-mascot="shush" title="Shush - secret">🤫</button>
-                            <button type="button" class="mascot-btn" data-mascot="monocle" title="Monocle - classy">🧐</button>
-                            <button type="button" class="mascot-btn" data-mascot="explode" title="Mind blown">🤯</button>
-                            <button type="button" class="mascot-btn" data-mascot="salute" title="Salute - respect">🫡</button>
-                            <button type="button" class="mascot-btn" data-mascot="chef" title="Chef - hat">🧑‍🍳</button>
-                            <button type="button" class="mascot-btn" data-mascot="muscle" title="Strong - determined">💪</button>
-                            <button type="button" class="mascot-btn" data-mascot="fire" title="Fire - intense">🔥</button>
-                            <button type="button" class="mascot-btn" data-mascot="star" title="Star - star eyes">⭐</button>
-                            <button type="button" class="mascot-btn" data-mascot="frog" title="Frog - extra froggy">🐸</button>
-                            <button type="button" class="mascot-btn" data-mascot="none" title="No mascot">❌</button>
+                        <div class="color-presets">
+                            <button type="button" class="color-preset" data-color="#E8F5E9" style="background:#E8F5E9"></button>
+                            <button type="button" class="color-preset" data-color="#FFF3E0" style="background:#FFF3E0"></button>
+                            <button type="button" class="color-preset" data-color="#E3F2FD" style="background:#E3F2FD"></button>
+                            <button type="button" class="color-preset" data-color="#FCE4EC" style="background:#FCE4EC"></button>
+                            <button type="button" class="color-preset" data-color="#F3E5F5" style="background:#F3E5F5"></button>
+                            <button type="button" class="color-preset" data-color="#FFFDE7" style="background:#FFFDE7"></button>
                         </div>
-                        <div class="mascot-options" style="margin-top: 8px;">
-                            <div class="spacing-row">
+
+                        <div class="field" style="margin-top:var(--s-3)">
+                            <label class="poll-toggle"><input type="checkbox" id="use-gradient"> Градиент</label>
+                            <div id="gradient-controls" style="display:none;margin-top:6px">
+                                <div class="color-row">
+                                    <input type="color" id="bg-color-2" value="#C8E6C9">
+                                    <select id="gradient-direction">
+                                        <option value="to bottom">↓ Вниз</option>
+                                        <option value="to top">↑ Вверх</option>
+                                        <option value="to right">→ Вправо</option>
+                                        <option value="to left">← Влево</option>
+                                        <option value="to bottom right">↘ По диагонали</option>
+                                        <option value="to top right">↗ По диагонали</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <label class="poll-toggle" style="margin-top:6px">
+                                <input type="checkbox" id="no-bg"> Прозрачный фон
+                            </label>
+                        </div>
+
+                        <div class="field">
+                            <label>Фон-картинка</label>
+                            <div class="uploader" id="image-upload-area">
+                                <input type="file" id="bg-image" accept="image/*" hidden>
+                                <div class="upload-placeholder" id="upload-placeholder">
+                                    <span class="ico">🖼️</span>
+                                    <span>Перетащи или нажми для загрузки</span>
+                                </div>
+                                <div class="upload-preview" id="upload-preview" style="display:none">
+                                    <img id="preview-thumb" src="" alt="">
+                                    <button type="button" class="remove" id="remove-image">✕</button>
+                                </div>
+                            </div>
+                            <div class="image-options" id="image-options" style="display:none">
+                                <div class="option-row">
+                                    <label>Затемнение: <span id="overlay-value">40%</span></label>
+                                    <input type="range" id="overlay-opacity" min="0" max="80" value="40">
+                                </div>
+                                <div class="option-row">
+                                    <label>Тень текста: <span id="text-shadow-value">70%</span></label>
+                                    <input type="range" id="text-shadow-intensity" min="0" max="100" value="70">
+                                </div>
+                                <div class="option-row">
+                                    <div class="overlay-colors">
+                                        <button type="button" class="overlay-color-btn active" data-overlay="black" style="background:#000">⬛</button>
+                                        <button type="button" class="overlay-color-btn" data-overlay="green" style="background:#2E7D32">🟩</button>
+                                        <button type="button" class="overlay-color-btn" data-overlay="white" style="background:#fff;color:#333">⬜</button>
+                                    </div>
+                                    <div class="fit-selector">
+                                        <button type="button" class="fit-btn active" data-fit="cover">Fill</button>
+                                        <button type="button" class="fit-btn" data-fit="contain">Fit</button>
+                                    </div>
+                                </div>
+                                <div class="option-row">
+                                    <label class="poll-toggle"><input type="checkbox" id="text-outline" checked> Обводка текста</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label>Маскот</label>
+                            <div class="tile-grid tile-grid--mascots" id="mascots">
+                                <button class="tile tile--compact mascot-btn active" data-mascot="happy" title="Happy" type="button">😊</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="thinking" title="Thinking" type="button">🤔</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="surprised" title="Surprised" type="button">😮</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="wink" title="Wink" type="button">😉</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="love" title="Love" type="button">😍</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="cool" title="Cool" type="button">😎</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="sad" title="Sad" type="button">😢</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="angry" title="Angry" type="button">😠</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="sleepy" title="Sleepy" type="button">😴</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="laugh" title="Laugh" type="button">😂</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="nerd" title="Nerd" type="button">🤓</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="party" title="Party" type="button">🥳</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="zany" title="Zany" type="button">🤪</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="shush" title="Shush" type="button">🤫</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="monocle" title="Monocle" type="button">🧐</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="explode" title="Mind blown" type="button">🤯</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="salute" title="Salute" type="button">🫡</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="chef" title="Chef" type="button">🧑‍🍳</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="muscle" title="Strong" type="button">💪</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="fire" title="Fire" type="button">🔥</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="star" title="Star" type="button">⭐</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="frog" title="Frog" type="button">🐸</button>
+                                <button class="tile tile--compact mascot-btn" data-mascot="none" title="No mascot" type="button">❌</button>
+                            </div>
+                            <div class="spacing-row" style="margin-top:var(--s-2)">
                                 <label>Размер <span id="mascot-size-val">100</span>%</label>
                                 <input type="range" id="mascot-size" min="50" max="150" value="100">
                             </div>
                         </div>
+
+                        <div class="field-grid">
+                            <div class="field">
+                                <label>Шрифт заголовка</label>
+                                <div class="seg">
+                                    <button type="button" class="font-btn active" data-font="Poppins">Poppins</button>
+                                    <button type="button" class="font-btn" data-font="Montserrat">Mont.</button>
+                                    <button type="button" class="font-btn" data-font="Roboto">Roboto</button>
+                                    <button type="button" class="font-btn" data-font="Playfair Display">Playfair</button>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label>Выравнивание</label>
+                                <div class="seg">
+                                    <button type="button" class="align-btn" data-align="left">⬅️</button>
+                                    <button type="button" class="align-btn active" data-align="center">⬛</button>
+                                    <button type="button" class="align-btn" data-align="right">➡️</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <input type="hidden" id="border-color" value="#4CAF50">
+                        <input type="hidden" id="border-width" value="0">
+                        <span id="border-width-val" hidden>0</span>
+
+                        <div class="field">
+                            <label>Декор <span class="muted small">(клик = вкл/выкл · стрелки = кол-во)</span></label>
+                            <div class="decor-grid" id="decorGrid"></div>
+                            <div class="decor-actions">
+                                <button type="button" onclick="shuffleDecorPositions()">🔀 Shuffle</button>
+                                <button type="button" onclick="randomDecor()">🎲 Random</button>
+                                <button type="button" onclick="clearDecor()">✕ Clear</button>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="section">
+                    <summary>📦 Блоки контента</summary>
+                    <div class="section-body">
+                        <div id="blocks-container"></div>
+                        <button type="button" class="add-block-btn" onclick="addBlock()">+ Добавить блок</button>
+                        <div class="spacing-row" style="margin-top:var(--s-3)">
+                            <label>Перед блоками <span id="blocks-top-val">0</span></label>
+                            <input type="range" id="blocks-top" min="0" max="200" value="0">
+                        </div>
+                        <div class="spacing-row">
+                            <label>Между блоками <span id="block-gap-val">12</span></label>
+                            <input type="range" id="block-gap" min="0" max="32" value="12">
+                        </div>
+                    </div>
+                </details>
+
+                <details class="section">
+                    <summary>⚙️ Отступы</summary>
+                    <div class="section-body">
+                        <div class="spacing-row">
+                            <label>Карточка <span id="card-padding-val">24</span></label>
+                            <input type="range" id="card-padding" min="8" max="48" value="24">
+                        </div>
+                        <div class="spacing-row">
+                            <label>Сверху <span id="top-gap-val">0</span></label>
+                            <input type="range" id="top-gap" min="0" max="120" value="0">
+                        </div>
+                        <div class="spacing-row">
+                            <label>После хидера/бейджа <span id="badge-gap-val">24</span></label>
+                            <input type="range" id="badge-gap" min="0" max="64" value="24">
+                        </div>
+                        <div class="spacing-row">
+                            <label>После заголовка <span id="title-gap-val">16</span></label>
+                            <input type="range" id="title-gap" min="0" max="48" value="16">
+                        </div>
+                        <div class="spacing-row">
+                            <label>Межстрочный <span id="line-gap-val">8</span></label>
+                            <input type="range" id="line-gap" min="0" max="32" value="8">
+                        </div>
+                        <div class="spacing-row">
+                            <label>Размер текста <span id="title-size-val">100</span>%</label>
+                            <input type="range" id="title-size" min="60" max="140" value="100">
+                        </div>
+                        <button type="button" class="reset-spacing-btn" onclick="resetSpacing()">Сбросить</button>
+                    </div>
+                </details>
+
+            </section>
+
+            <!-- ═══════════════ PREVIEW ═══════════════ -->
+            <section class="surface panel--preview" aria-label="Превью">
+                <h2>
+                    Превью
+                    <span class="h2-sub" id="formatHint">1080×1080</span>
+                </h2>
+
+                <div class="preview-wrap">
+                    <canvas id="card-preview" width="540" height="540"></canvas>
+                </div>
+
+                <div class="field" style="margin-top:var(--s-2)">
+                    <label>Формат</label>
+                    <div class="seg">
+                        <button type="button" class="format-btn" data-format="horizontal" title="4:3">↔️ 4:3</button>
+                        <button type="button" class="format-btn active" data-format="square" title="1:1">⬛ 1:1</button>
+                        <button type="button" class="format-btn" data-format="vertical" title="4:5">↕️ 4:5</button>
+                    </div>
+                </div>
+
+                <div class="preview-tools">
+                    <button class="btn btn--primary" type="button" onclick="exportCard()">📥 PNG</button>
+                    <button class="btn" type="button" onclick="copyToClipboard()">📋 Копир.</button>
+                    <button class="btn" type="button" onclick="fillExample()">💡 Пример</button>
+                </div>
+            </section>
+
+            <!-- ═══════════════ PUBLISH ═══════════════ -->
+            <section class="surface panel--publish" aria-label="Публикация">
+                <h2>📤 Публикация</h2>
+
+                <div class="publish-conn">
+                    <span class="pdot" id="pubDot"></span>
+                    <span id="pubConnText">Не подключен</span>
+                </div>
+
+                <div class="field">
+                    <label>Канал</label>
+                    <div class="seg seg--channels" id="pubChTog">
+                        <button class="on" data-ch="debug" type="button">🟢 Debug</button>
+                        <button data-ch="production" type="button">🔴 Prod</button>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>
+                        Текст поста
+                        <button type="button" class="add-inline-btn" style="margin:0 0 0 6px;padding:2px 8px;font-size:var(--fs-2xs);font-weight:600" onclick="pubAutoText()">🔄 Из карточки</button>
+                    </label>
+                    <textarea class="publish-text" id="pubText" spellcheck="false" placeholder="Автозаполняется из карточки..."></textarea>
+                    <div class="pub-tags" id="pubTags"></div>
+                </div>
+
+                <div class="field">
+                    <label>Предпросмотр</label>
+                    <div class="pub-preview" id="pubPreview"></div>
+                </div>
+
+                <div class="field">
+                    <label>Когда</label>
+                    <div class="pub-sched-row">
+                        <select id="pubWhen">
+                            <option value="now">Сейчас</option>
+                            <option value="schedule">Отложить</option>
+                        </select>
+                        <input type="datetime-local" id="pubDateTime" hidden>
+                    </div>
+                </div>
+
+                <div class="pub-options">
+                    <label><input type="checkbox" id="pubWithImage" checked> С картинкой</label>
+                    <label><input type="checkbox" id="pubWithSub" checked> Подпись канала</label>
+                    <label><input type="checkbox" id="pubWithTts"> 🔊 Озвучить (TTS pl-PL)</label>
+                </div>
+
+                <div class="tts-panel" id="ttsPanel" style="display:none">
+                    <div class="tts-providers">
+                        <label>Движок
+                            <select id="ttsProvider">
+                                <option value="elevenlabs" selected>ElevenLabs ⭐</option>
+                                <option value="azure">Azure</option>
+                            </select>
+                        </label>
+                        <label>Голос
+                            <select id="ttsVoice"></select>
+                        </label>
+                        <label>Темп
+                            <select id="ttsRate">
+                                <option value="-20">-20%</option>
+                                <option value="-10">-10%</option>
+                                <option value="-5">-5%</option>
+                                <option value="0" selected>норм</option>
+                                <option value="5">+5%</option>
+                                <option value="10">+10%</option>
+                            </select>
+                        </label>
                     </div>
 
-                    <div class="form-group">
-                        <label>Шрифт заголовка</label>
-                        <div class="font-selector">
-                            <button type="button" class="font-btn active" data-font="Poppins">Poppins</button>
-                            <button type="button" class="font-btn" data-font="Montserrat">Montserrat</button>
-                            <button type="button" class="font-btn" data-font="Roboto">Roboto</button>
-                            <button type="button" class="font-btn" data-font="Playfair Display">Playfair</button>
+                    <div class="tts-mode">
+                        <div class="seg" id="ttsModeSeg">
+                            <button type="button" id="ttsModeText" class="active" onclick="setTtsMode('text')">📝 Текст</button>
+                            <button type="button" id="ttsModeStudio" onclick="setTtsMode('studio')">🎬 Studio</button>
+                        </div>
+                        <span class="tts-mode-stat" id="ttsLinesStat"></span>
+                    </div>
+
+                    <textarea id="ttsText" rows="2" placeholder="Авто: word + примеры. Можно переопределить."></textarea>
+
+                    <div class="tts-studio" id="ttsStudio">
+                        <div id="ttsLinesList"></div>
+                        <div class="row-flex" style="margin-top:6px;flex-wrap:wrap;gap:6px">
+                            <button type="button" class="add-inline-btn" onclick="addTtsLine()" style="margin:0">+ Реплика</button>
+                            <button type="button" class="btn btn--sm" onclick="syncStudioToText()">↑ В текст</button>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Выравнивание текста</label>
-                        <div class="align-selector">
-                            <button type="button" class="align-btn" data-align="left">⬅️</button>
-                            <button type="button" class="align-btn active" data-align="center">⬛</button>
-                            <button type="button" class="align-btn" data-align="right">➡️</button>
-                        </div>
+                    <label class="poll-toggle">
+                        <input type="checkbox" id="ttsDialog">
+                        💬 Диалог (по ролям, формат <code>Имя: текст</code>)
+                        <span id="ttsDialogAuto" style="display:none;color:var(--c-frog-3);font-weight:600">· авто</span>
+                    </label>
+
+                    <div class="tts-actions">
+                        <button type="button" class="btn btn--sm" onclick="ttsPreview()" id="ttsPreviewBtn" style="border-color:var(--c-frog);color:var(--c-frog-3)">▶ Preview</button>
+                        <button type="button" class="btn btn--sm" onclick="ttsTestAll()" id="ttsTestAllBtn" style="background:var(--c-amber-soft);border-color:var(--c-amber);color:var(--c-amber-deep)">🧪 Все голоса → TG</button>
+                        <button type="button" class="btn btn--sm" onclick="openWordHistoryPicker()" id="historyPickerBtn" style="background:var(--c-info-soft);border-color:var(--c-info);color:var(--c-info-deep)">📚 История</button>
+                        <span class="tts-hint" id="ttsHint"></span>
                     </div>
 
-                    <input type="hidden" id="border-color" value="#4CAF50">
-                    <input type="hidden" id="border-width" value="0">
-                    <span id="border-width-val" style="display:none">0</span>
-
-                    <div class="form-group">
-                        <label>Декор <span style="font-weight:400;color:#999;font-size:.7rem">(click to toggle, arrows for count)</span></label>
-                        <div class="decor-grid" id="decorGrid"></div>
-                        <div class="decor-actions">
-                            <button onclick="shuffleDecorPositions()">🔀 Shuffle</button>
-                            <button onclick="randomDecor()">🎲 Random</button>
-                            <button onclick="clearDecor()">✕ Clear</button>
-                        </div>
-                    </div>
+                    <audio id="ttsAudio" controls preload="auto"></audio>
                 </div>
-            </details>
 
-            <details class="options-section">
-                <summary>📦 Блоки контента</summary>
-                <div class="options-content">
-                    <div id="blocks-container"></div>
-                    <button type="button" class="add-block-btn" onclick="addBlock()">+ Добавить блок</button>
-                    <div class="spacing-row" style="margin-top: 12px;">
-                        <label>Перед блоками <span id="blocks-top-val">0</span></label>
-                        <input type="range" id="blocks-top" min="0" max="200" value="0">
-                    </div>
-                    <div class="spacing-row">
-                        <label>Между блоками <span id="block-gap-val">12</span></label>
-                        <input type="range" id="block-gap" min="0" max="32" value="12">
-                    </div>
-                </div>
-            </details>
+                <button class="pub-btn now" id="pubBtn" type="button" onclick="publishPost()" disabled>
+                    📤 Опубликовать
+                </button>
 
-            <details class="options-section">
-                <summary>⚙️ Отступы</summary>
-                <div class="options-content">
-                    <div class="spacing-row">
-                        <label>Карточка <span id="card-padding-val">24</span></label>
-                        <input type="range" id="card-padding" min="8" max="48" value="24">
+                <div style="margin-top:var(--s-4)">
+                    <div class="row-flex" style="justify-content:space-between;margin-bottom:6px">
+                        <label class="small" style="font-weight:600;color:var(--c-text-2);margin:0">📅 Запланированные</label>
+                        <button type="button" class="btn btn--sm" onclick="loadScheduledEditor()" title="Обновить">🔄</button>
                     </div>
-                    <div class="spacing-row">
-                        <label>Сверху (до контента) <span id="top-gap-val">0</span></label>
-                        <input type="range" id="top-gap" min="0" max="120" value="0">
-                    </div>
-                    <div class="spacing-row">
-                        <label>После хидера/бейджа <span id="badge-gap-val">24</span></label>
-                        <input type="range" id="badge-gap" min="0" max="64" value="24">
-                    </div>
-                    <div class="spacing-row">
-                        <label>После заголовка <span id="title-gap-val">16</span></label>
-                        <input type="range" id="title-gap" min="0" max="48" value="16">
-                    </div>
-                    <div class="spacing-row">
-                        <label>Межстрочный <span id="line-gap-val">8</span></label>
-                        <input type="range" id="line-gap" min="0" max="32" value="8">
-                    </div>
-                    <div class="spacing-row">
-                        <label>Размер текста <span id="title-size-val">100</span>%</label>
-                        <input type="range" id="title-size" min="60" max="140" value="100">
-                    </div>
-                    <button type="button" class="reset-spacing-btn" onclick="resetSpacing()">Сбросить</button>
+                    <div id="schedPanel" style="max-height:240px;overflow-y:auto"></div>
                 </div>
-            </details>
-            </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Mobile FAB -->
+    <button class="fab-publish" type="button" onclick="document.getElementById('pubBtn').click()" id="fabPublish">
+        📤 Опубликовать
+    </button>
+
+    <!-- ═════════════ QUEUE MODAL ═════════════ -->
+    <div class="modal" id="queueModal" role="dialog" aria-label="Очередь публикаций">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2>📋 Очередь публикаций</h2>
+                <button class="modal-close" type="button" onclick="closeQueueModal()" aria-label="Закрыть">×</button>
             </div>
 
-            <div class="form-group">
-                <label>Формат</label>
-                <div class="format-selector">
-                    <button type="button" class="format-btn" data-format="horizontal">↔️</button>
-                    <button type="button" class="format-btn active" data-format="square">⬜</button>
-                    <button type="button" class="format-btn" data-format="vertical">↕️</button>
+            <div class="field">
+                <label>JSON со словами</label>
+                <textarea id="queueJson" rows="10" placeholder='[{"word":"rozsądny","transcription":"[розсо́ндны]","translation":"разумный","examples":["To rozsądna decyzja.","Bądź rozsądny!"],"subtitle":"Poziom: B1"}]'></textarea>
+                <div class="row-flex row-flex--wrap" style="margin-top:6px">
+                    <button type="button" class="btn btn--sm" onclick="loadQueueExample()">Пример</button>
+                    <button type="button" class="btn btn--sm" onclick="loadQueueFromFile()">Из файла</button>
+                    <input type="file" id="queueFile" accept=".json" hidden onchange="onQueueFileSelected(event)">
+                    <span id="queueParsedHint" class="small muted" style="margin-left:auto"></span>
                 </div>
             </div>
 
-            <button class="export-btn" onclick="exportCard()">
-                📥 Скачать PNG
-            </button>
-            <div class="btn-row">
-                <button class="btn-secondary" onclick="copyToClipboard()">📋 Копировать</button>
-                <button class="btn-secondary" onclick="fillExample()">💡 Пример</button>
-            </div>
-
-        </div>
-
-        <div class="panel preview-panel">
-            <h2>Предпросмотр</h2>
-            <div id="preview-container">
-                <canvas id="card-preview" width="540" height="540"></canvas>
-            </div>
-        </div>
-
-        <div class="panel publish-panel">
-            <h2>📤 Публикация</h2>
-            <div class="pub-conn">
-                <span class="pdot" id="pubDot"></span>
-                <span id="pubConnText">Не подключен</span>
-            </div>
-
-            <div class="form-group">
-                <label>Канал</label>
-                <div class="pub-ch-tog" id="pubChTog">
-                    <button class="on" data-ch="debug">Debug</button>
-                    <button data-ch="production">Prod</button>
+            <div class="field-grid field-grid--3">
+                <div class="field">
+                    <label>Дата старта</label>
+                    <input type="date" id="qStartDate">
                 </div>
-            </div>
-
-            <div class="form-group">
-                <label>Текст поста</label>
-                <textarea class="pub-text" id="pubText" spellcheck="false" placeholder="Автозаполняется из карточки..."></textarea>
-                <div class="pub-tags" id="pubTags"></div>
-                <button type="button" style="margin-top:4px;padding:3px 10px;border:1px solid #ddd;border-radius:7px;background:#fff;cursor:pointer;font-size:.7rem;" onclick="pubAutoText()">🔄 Из карточки</button>
-            </div>
-
-            <div class="form-group">
-                <label>Предпросмотр</label>
-                <div class="pub-preview" id="pubPreview"></div>
-            </div>
-
-            <div class="form-group">
-                <label>Когда</label>
-                <div class="pub-sched-row">
-                    <select id="pubWhen">
-                        <option value="now">Сейчас</option>
-                        <option value="schedule">Отложить</option>
+                <div class="field">
+                    <label>Время</label>
+                    <input type="time" id="qStartTime" value="08:00">
+                </div>
+                <div class="field">
+                    <label>Канал</label>
+                    <select id="qChannel">
+                        <option value="debug">Debug</option>
+                        <option value="production">Production</option>
                     </select>
-                    <input type="datetime-local" id="pubDateTime" style="display:none;">
                 </div>
             </div>
 
-            <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
-                <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;">
-                    <input type="checkbox" id="pubWithImage" checked style="width:14px;height:14px;">
-                    С картинкой
-                </label>
-                <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;">
-                    <input type="checkbox" id="pubWithSub" checked style="width:14px;height:14px;">
-                    Подпись канала
-                </label>
-                <label style="display:flex;align-items:center;gap:6px;font-size:.75rem;">
-                    <input type="checkbox" id="pubWithTts" style="width:14px;height:14px;">
-                    🔊 Озвучить (TTS pl-PL)
-                </label>
+            <div class="field-grid">
+                <div class="field">
+                    <label>Интервал</label>
+                    <select id="qInterval">
+                        <option value="1">Каждый день</option>
+                        <option value="2">Через день</option>
+                        <option value="3">Раз в 3 дня</option>
+                        <option value="7">Раз в неделю</option>
+                        <option value="0">Свой пресет</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Шаблон</label>
+                    <select id="qTemplate">
+                        <option value="slowo" selected>Słowo dnia</option>
+                        <option value="ciekawostka">Ciekawostka</option>
+                        <option value="blad">Błąd dnia</option>
+                        <option value="podsluchano">Podsłuchano</option>
+                        <option value="custom">Своя</option>
+                    </select>
+                </div>
             </div>
 
-            <div id="ttsPanel" style="display:none;background:#f5f5f5;border-radius:7px;padding:8px;margin-bottom:8px;font-size:.75rem;">
-                <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
-                    <label style="width:110px;">Движок:
-                        <select id="ttsProvider" style="width:100%;padding:3px;border:1px solid #ddd;border-radius:5px;font-size:.72rem;">
-                            <option value="elevenlabs" selected>ElevenLabs ⭐</option>
-                            <option value="azure">Azure</option>
-                        </select>
-                    </label>
-                    <label style="flex:1;">Голос:
-                        <select id="ttsVoice" style="width:100%;padding:3px;border:1px solid #ddd;border-radius:5px;font-size:.72rem;"></select>
-                    </label>
-                    <label style="width:90px;">Темп:
-                        <select id="ttsRate" style="width:100%;padding:3px;border:1px solid #ddd;border-radius:5px;font-size:.72rem;">
-                            <option value="-20">-20% медл.</option>
-                            <option value="-10">-10%</option>
-                            <option value="-5">-5%</option>
-                            <option value="0" selected>норм</option>
-                            <option value="5">+5%</option>
-                            <option value="10">+10% живо</option>
-                        </select>
-                    </label>
-                </div>
-                <div style="display:flex;gap:5px;align-items:center;margin-bottom:4px;">
-                    <button type="button" id="ttsModeText" onclick="setTtsMode('text')"
-                            style="padding:3px 9px;border:1px solid #4CAF50;background:#4CAF50;color:#fff;border-radius:5px;cursor:pointer;font-size:.7rem;font-weight:600;">📝 Текст</button>
-                    <button type="button" id="ttsModeStudio" onclick="setTtsMode('studio')"
-                            style="padding:3px 9px;border:1px solid #ddd;background:#fff;color:#555;border-radius:5px;cursor:pointer;font-size:.7rem;font-weight:600;">🎬 Studio</button>
-                    <span style="flex:1;"></span>
-                    <span id="ttsLinesStat" style="font-size:.68rem;color:#888;"></span>
-                </div>
-                <textarea id="ttsText" rows="2" placeholder="Авто: word + примеры. Можно переопределить."
-                          style="width:100%;padding:5px;border:1px solid #ddd;border-radius:5px;font-size:.72rem;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
-
-                <div id="ttsStudio" style="display:none;background:#fff;border:1px solid #ddd;border-radius:6px;padding:6px;margin-top:4px;">
-                    <div id="ttsLinesList"></div>
-                    <button type="button" onclick="addTtsLine()"
-                            style="margin-top:4px;padding:5px 10px;border:1px dashed #4CAF50;background:transparent;color:#2E7D32;border-radius:5px;cursor:pointer;font-size:.72rem;font-weight:600;">+ Добавить реплику</button>
-                    <button type="button" onclick="syncStudioToText()"
-                            style="margin-top:4px;margin-left:6px;padding:5px 10px;border:1px solid #ddd;background:#fff;color:#555;border-radius:5px;cursor:pointer;font-size:.7rem;" title="Собрать строки обратно в текст">↑ В текст</button>
-                </div>
-
-                <label style="display:flex;align-items:center;gap:5px;margin-top:4px;font-size:.72rem;color:#555;">
-                    <input type="checkbox" id="ttsDialog" style="width:13px;height:13px;">
-                    💬 Диалог (разные голоса по ролям, формат <code>Имя: текст</code>)
-                    <span id="ttsDialogAuto" style="color:#2E7D32;font-weight:600;display:none;">· авто-обнаружено</span>
-                </label>
-                <div style="display:flex;gap:5px;margin-top:5px;align-items:center;flex-wrap:wrap;">
-                    <button type="button" onclick="ttsPreview()" id="ttsPreviewBtn"
-                            style="padding:4px 10px;border:1px solid #4CAF50;background:#fff;color:#2E7D32;border-radius:5px;cursor:pointer;font-size:.72rem;font-weight:600;">▶ Preview</button>
-                    <button type="button" onclick="ttsTestAll()" id="ttsTestAllBtn"
-                            style="padding:4px 10px;border:1px solid #ff9800;background:#fff3e0;color:#e65100;border-radius:5px;cursor:pointer;font-size:.72rem;font-weight:600;" title="Озвучить всеми голосами и отправить в текущий канал">🧪 Все голоса → TG</button>
-                    <button type="button" onclick="openWordHistoryPicker()" id="historyPickerBtn"
-                            style="padding:4px 10px;border:1px solid #2196F3;background:#E3F2FD;color:#1565C0;border-radius:5px;cursor:pointer;font-size:.72rem;font-weight:600;" title="Подтянуть слово из истории канала">📚 Из истории</button>
-                    <span id="ttsHint" style="font-size:.7rem;color:#666;"></span>
-                </div>
-                <audio id="ttsAudio" controls preload="auto" style="width:100%;height:32px;display:none;margin-top:6px;"></audio>
+            <div id="qSkipDup" class="row-flex" style="font-size:var(--fs-sm)">
+                <input type="checkbox" id="qSkipDupCb" checked>
+                <label for="qSkipDupCb" style="margin:0;font-weight:500">Пропускать дубликаты (проверка по истории канала)</label>
             </div>
 
-            <button class="pub-btn now" id="pubBtn" onclick="publishPost()" disabled>
-                📤 Опубликовать
-            </button>
-
-            <div style="margin-top:12px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-                    <label style="font-size:.75rem;font-weight:600;color:#555;">📅 Запланированные</label>
-                    <button type="button" onclick="loadScheduledEditor()" style="padding:2px 8px;font-size:.7rem;border:1px solid #ddd;border-radius:5px;background:#fff;cursor:pointer;">🔄</button>
-                </div>
-                <div id="schedPanel" style="max-height:250px;overflow-y:auto;"></div>
+            <div class="modal-foot">
+                <button class="btn" type="button" onclick="closeQueueModal()">Отмена</button>
+                <button class="btn btn--primary" type="button" onclick="startQueue()">Начать обработку</button>
             </div>
         </div>
     </div>
 
-    <!-- ═══════════ QUEUE MODAL ═══════════ -->
-    <div id="queueModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:20px;">
-        <div style="background:#fff;border-radius:14px;padding:20px;max-width:720px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-                <h2 style="font-family:Poppins,sans-serif;color:#2E7D32;margin:0;">📋 Очередь публикаций</h2>
-                <button onclick="closeQueueModal()" style="background:transparent;border:none;font-size:1.4rem;cursor:pointer;color:#999;">×</button>
+    <!-- ═════════════ QUEUE FLOATING BAR ═════════════ -->
+    <div id="queueBar" role="status">
+        <div class="qbar-inner">
+            <div class="qbar-stat">
+                <span class="qbar-stat-label">Карточка</span>
+                <span class="qbar-stat-value qbar-progress" id="qbProgress">0 / 0</span>
             </div>
-
-            <div style="display:grid;grid-template-columns:1fr;gap:14px;">
-                <div>
-                    <label style="font-size:.78rem;font-weight:600;color:#666;text-transform:uppercase;display:block;margin-bottom:4px;">JSON со словами</label>
-                    <textarea id="queueJson" rows="10" placeholder='[{"word":"rozsądny","transcription":"[розсо́ндны]","translation":"разумный","examples":["To rozsądna decyzja.","Bądź rozsądny!"],"subtitle":"Poziom: B1"}]'
-                      style="width:100%;font-family:'Courier New',monospace;font-size:.78rem;padding:8px;border:1px solid #ddd;border-radius:6px;resize:vertical;"></textarea>
-                    <div style="display:flex;gap:6px;margin-top:4px;font-size:.75rem;">
-                        <button onclick="loadQueueExample()" style="padding:4px 8px;border:1px solid #ddd;background:#f5f5f5;border-radius:5px;cursor:pointer;">Пример</button>
-                        <button onclick="loadQueueFromFile()" style="padding:4px 8px;border:1px solid #ddd;background:#f5f5f5;border-radius:5px;cursor:pointer;">Из файла</button>
-                        <input type="file" id="queueFile" accept=".json" style="display:none;" onchange="onQueueFileSelected(event)">
-                        <span id="queueParsedHint" style="margin-left:auto;color:#666;align-self:center;"></span>
-                    </div>
-                </div>
-
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-                    <div>
-                        <label style="font-size:.7rem;font-weight:600;color:#666;text-transform:uppercase;">Дата старта</label>
-                        <input type="date" id="qStartDate" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;">
-                    </div>
-                    <div>
-                        <label style="font-size:.7rem;font-weight:600;color:#666;text-transform:uppercase;">Время</label>
-                        <input type="time" id="qStartTime" value="08:00" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;">
-                    </div>
-                    <div>
-                        <label style="font-size:.7rem;font-weight:600;color:#666;text-transform:uppercase;">Канал</label>
-                        <select id="qChannel" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;">
-                            <option value="debug">Debug</option>
-                            <option value="production">Production</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                    <div>
-                        <label style="font-size:.7rem;font-weight:600;color:#666;text-transform:uppercase;">Интервал</label>
-                        <select id="qInterval" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;">
-                            <option value="1">Каждый день</option>
-                            <option value="2">Через день</option>
-                            <option value="3">Раз в 3 дня</option>
-                            <option value="7">Раз в неделю</option>
-                            <option value="0">Свой пресет</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size:.7rem;font-weight:600;color:#666;text-transform:uppercase;">Шаблон карточки</label>
-                        <select id="qTemplate" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px;">
-                            <option value="slowo" selected>Słowo dnia</option>
-                            <option value="ciekawostka">Ciekawostka</option>
-                            <option value="blad">Błąd dnia</option>
-                            <option value="podsluchano">Podsłuchano</option>
-                            <option value="custom">Своя</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div id="qSkipDup" style="display:flex;align-items:center;gap:6px;font-size:.85rem;">
-                    <input type="checkbox" id="qSkipDupCb" checked>
-                    <label for="qSkipDupCb">Пропускать дубликаты (проверка по истории канала)</label>
-                </div>
-
-                <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #eee;padding-top:12px;">
-                    <button onclick="closeQueueModal()" style="padding:8px 14px;border:1px solid #ddd;background:#fff;border-radius:7px;cursor:pointer;">Отмена</button>
-                    <button onclick="startQueue()" style="padding:8px 14px;border:none;background:#4CAF50;color:#fff;border-radius:7px;cursor:pointer;font-weight:600;">Начать обработку</button>
-                </div>
+            <div class="qbar-stat">
+                <span class="qbar-stat-label">Запланировано</span>
+                <span class="qbar-stat-value" id="qbDate">—</span>
             </div>
-        </div>
-    </div>
-
-    <!-- ═══════════ QUEUE FLOATING BAR ═══════════ -->
-    <div id="queueBar" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #4CAF50;padding:10px 16px;z-index:9000;box-shadow:0 -4px 20px rgba(0,0,0,.1);">
-        <div style="max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <div style="display:flex;flex-direction:column;flex:0 0 auto;">
-                <span style="font-size:.7rem;color:#666;text-transform:uppercase;font-weight:600;">Карточка</span>
-                <span id="qbProgress" style="font-family:Poppins,sans-serif;font-size:1rem;color:#2E7D32;font-weight:700;">0 / 0</span>
+            <div class="qbar-stat">
+                <span class="qbar-stat-label">Канал</span>
+                <span class="qbar-stat-value" id="qbChannel">—</span>
             </div>
-            <div style="display:flex;flex-direction:column;flex:0 0 auto;">
-                <span style="font-size:.7rem;color:#666;text-transform:uppercase;font-weight:600;">Запланировано на</span>
-                <span id="qbDate" style="font-size:.85rem;font-weight:600;">—</span>
+            <div class="qbar-stat">
+                <span class="qbar-stat-label">Готово / Скип</span>
+                <span class="qbar-stat-value" id="qbStats">0 / 0</span>
             </div>
-            <div style="display:flex;flex-direction:column;flex:0 0 auto;">
-                <span style="font-size:.7rem;color:#666;text-transform:uppercase;font-weight:600;">Канал</span>
-                <span id="qbChannel" style="font-size:.85rem;font-weight:600;">—</span>
-            </div>
-            <div style="display:flex;flex-direction:column;flex:0 0 auto;">
-                <span style="font-size:.7rem;color:#666;text-transform:uppercase;font-weight:600;">Готово / Пропущено</span>
-                <span id="qbStats" style="font-size:.85rem;">0 / 0</span>
-            </div>
-            <div id="qbDupWarn" style="display:none;background:#fff3e0;color:#e65100;border:1px solid #ffb74d;padding:4px 8px;border-radius:6px;font-size:.78rem;font-weight:600;">⚠️ дубликат</div>
-            <div style="margin-left:auto;display:flex;gap:6px;">
-                <button onclick="queueAction('skip')" style="padding:8px 12px;border:1px solid #ddd;background:#fff;border-radius:7px;cursor:pointer;">Пропустить</button>
-                <button onclick="queueAction('schedule')" id="qbSchedBtn" style="padding:8px 14px;border:none;background:#4CAF50;color:#fff;border-radius:7px;cursor:pointer;font-weight:600;">В отложку → след.</button>
-                <button onclick="queueAction('end')" style="padding:8px 12px;border:1px solid #E53935;background:#fff;color:#E53935;border-radius:7px;cursor:pointer;">Завершить</button>
+            <div id="qbDupWarn">⚠️ дубликат</div>
+            <div class="qbar-actions">
+                <button class="btn btn--sm" type="button" onclick="queueAction('skip')">Пропустить</button>
+                <button class="btn btn--primary btn--sm" type="button" onclick="queueAction('schedule')" id="qbSchedBtn">В отложку → след.</button>
+                <button class="btn btn--danger btn--sm" type="button" onclick="queueAction('end')">Завершить</button>
             </div>
         </div>
     </div>

@@ -132,15 +132,22 @@
             el.addEventListener('input', () => drawCard());
         });
 
+        const FORMAT_DIMS = { horizontal: '1080×810', square: '1080×1080', vertical: '1080×1350' };
+        function updateFormatHint(fmt) {
+            const fh = document.getElementById('formatHint');
+            if (fh) fh.textContent = FORMAT_DIMS[fmt] || '';
+        }
         document.querySelectorAll('.format-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentFormat = btn.dataset.format;
+                updateFormatHint(currentFormat);
                 setupCanvas();
                 drawCard();
             });
         });
+        updateFormatHint('square');
 
         // Spacing sliders value display
         const spacingSliders = ['card-padding', 'top-gap', 'badge-gap', 'title-gap', 'line-gap', 'title-size', 'block-gap', 'blocks-top'];

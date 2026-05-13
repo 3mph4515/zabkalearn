@@ -292,12 +292,12 @@
             const voices = TTS_VOICES[provider] || TTS_VOICES.azure;
             const voiceOpts = voices.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
             list.innerHTML = ttsLines.map((ln, idx) => `
-                <div class="tts-line-row" data-idx="${idx}" style="display:flex;gap:4px;align-items:center;margin-bottom:4px;">
-                    <input type="text" class="tts-line-speaker" data-idx="${idx}" value="${(ln.speaker||'').replace(/"/g,'&quot;')}" placeholder="Имя" style="width:75px;padding:3px;border:1px solid #ddd;border-radius:4px;font-size:.7rem;">
-                    <select class="tts-line-voice" data-idx="${idx}" style="width:130px;padding:3px;border:1px solid #ddd;border-radius:4px;font-size:.7rem;">${voiceOpts}</select>
-                    <input type="text" class="tts-line-text" data-idx="${idx}" value="${(ln.text||'').replace(/"/g,'&quot;')}" placeholder="Реплика" style="flex:1;padding:3px;border:1px solid #ddd;border-radius:4px;font-size:.72rem;">
-                    <button type="button" class="tts-line-preview" data-idx="${idx}" style="padding:3px 6px;border:1px solid #4CAF50;background:#fff;color:#2E7D32;border-radius:4px;cursor:pointer;font-size:.7rem;" title="Прослушать">▶</button>
-                    <button type="button" class="tts-line-remove" data-idx="${idx}" style="padding:3px 6px;border:1px solid #E53935;background:#fff;color:#E53935;border-radius:4px;cursor:pointer;font-size:.7rem;">×</button>
+                <div class="tts-line-row" data-idx="${idx}">
+                    <input type="text" class="tts-line-speaker" data-idx="${idx}" value="${(ln.speaker||'').replace(/"/g,'&quot;')}" placeholder="Имя">
+                    <select class="tts-line-voice" data-idx="${idx}">${voiceOpts}</select>
+                    <input type="text" class="tts-line-text" data-idx="${idx}" value="${(ln.text||'').replace(/"/g,'&quot;')}" placeholder="Реплика">
+                    <button type="button" class="tts-line-preview" data-idx="${idx}" title="Прослушать">▶</button>
+                    <button type="button" class="tts-line-remove" data-idx="${idx}" title="Удалить">×</button>
                 </div>
             `).join('');
             // Set voice select values
@@ -393,14 +393,8 @@
             const studio = document.getElementById('ttsStudio');
             const btnT = document.getElementById('ttsModeText');
             const btnS = document.getElementById('ttsModeStudio');
-            const setActive = (b, on) => {
-                if (!b) return;
-                b.style.background = on ? '#4CAF50' : '#fff';
-                b.style.color = on ? '#fff' : '#555';
-                b.style.borderColor = on ? '#4CAF50' : '#ddd';
-            };
-            setActive(btnT, mode === 'text');
-            setActive(btnS, mode === 'studio');
+            if (btnT) btnT.classList.toggle('active', mode === 'text');
+            if (btnS) btnS.classList.toggle('active', mode === 'studio');
             if (mode === 'studio') {
                 if (txt) txt.style.display = 'none';
                 if (studio) studio.style.display = 'block';
