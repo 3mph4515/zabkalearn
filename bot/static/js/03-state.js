@@ -26,10 +26,14 @@
                     document.getElementById('badge-text').value = btn.dataset.badge;
                 }
 
-                // Quiz / Słuchanie / Ankieta: poll-only posts → no card image by default
-                if (['quiz', 'ankieta', 'sluchanie'].includes(currentTemplate)) {
+                // Quiz / Słuchanie / Ankieta: poll-only posts → no card image by default.
+                // Non-poll templates: restore card image (user can uncheck after).
+                {
                     const imgCb = document.getElementById('pubWithImage');
-                    if (imgCb) imgCb.checked = false;
+                    if (imgCb) {
+                        const isPoll = ['quiz', 'ankieta', 'sluchanie'].includes(currentTemplate);
+                        imgCb.checked = !isPoll;
+                    }
                 }
 
                 // Słuchanie: auto-enable TTS dialog mode + pre-fill defaults
