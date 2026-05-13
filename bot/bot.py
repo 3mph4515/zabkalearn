@@ -28,7 +28,7 @@ BOT_TOKEN = os.environ["BOT_TOKEN"]
 USERS_FILE = os.path.join(os.path.dirname(__file__), "users.json")
 DB_FILE = os.path.join(os.path.dirname(__file__), "quiz.db")
 
-QUIZ_VERSION = "2.13"
+QUIZ_VERSION = "2.14"
 
 # Store pending captchas: {user_id: {"answer": int, "attempts": int}}
 pending_captchas = {}

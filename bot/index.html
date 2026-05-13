@@ -11,7 +11,7 @@
     <button class="theme-toggle" id="theme-toggle" title="Тёмная тема">🌙</button>
 
     <div class="container">
-        <h1>Polski Daily | Card Generator <span class="version">v2.13</span></h1>
+        <h1>Polski Daily | Card Generator <span class="version">v2.14</span></h1>
 
         <div class="panel controls-panel settings-panel">
             <h2>Настройки карточки</h2>
@@ -475,8 +475,25 @@
                         </select>
                     </label>
                 </div>
+                <div style="display:flex;gap:5px;align-items:center;margin-bottom:4px;">
+                    <button type="button" id="ttsModeText" onclick="setTtsMode('text')"
+                            style="padding:3px 9px;border:1px solid #4CAF50;background:#4CAF50;color:#fff;border-radius:5px;cursor:pointer;font-size:.7rem;font-weight:600;">📝 Текст</button>
+                    <button type="button" id="ttsModeStudio" onclick="setTtsMode('studio')"
+                            style="padding:3px 9px;border:1px solid #ddd;background:#fff;color:#555;border-radius:5px;cursor:pointer;font-size:.7rem;font-weight:600;">🎬 Studio</button>
+                    <span style="flex:1;"></span>
+                    <span id="ttsLinesStat" style="font-size:.68rem;color:#888;"></span>
+                </div>
                 <textarea id="ttsText" rows="2" placeholder="Авто: word + примеры. Можно переопределить."
                           style="width:100%;padding:5px;border:1px solid #ddd;border-radius:5px;font-size:.72rem;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+
+                <div id="ttsStudio" style="display:none;background:#fff;border:1px solid #ddd;border-radius:6px;padding:6px;margin-top:4px;">
+                    <div id="ttsLinesList"></div>
+                    <button type="button" onclick="addTtsLine()"
+                            style="margin-top:4px;padding:5px 10px;border:1px dashed #4CAF50;background:transparent;color:#2E7D32;border-radius:5px;cursor:pointer;font-size:.72rem;font-weight:600;">+ Добавить реплику</button>
+                    <button type="button" onclick="syncStudioToText()"
+                            style="margin-top:4px;margin-left:6px;padding:5px 10px;border:1px solid #ddd;background:#fff;color:#555;border-radius:5px;cursor:pointer;font-size:.7rem;" title="Собрать строки обратно в текст">↑ В текст</button>
+                </div>
+
                 <label style="display:flex;align-items:center;gap:5px;margin-top:4px;font-size:.72rem;color:#555;">
                     <input type="checkbox" id="ttsDialog" style="width:13px;height:13px;">
                     💬 Диалог (разные голоса по ролям, формат <code>Имя: текст</code>)

@@ -198,13 +198,16 @@
         function getTtsPayload() {
             if (!document.getElementById('pubWithTts')?.checked) return null;
             const txt = (document.getElementById('ttsText')?.value || '').trim() || ttsBuildAutoText();
-            if (!txt) return null;
             const provider = document.getElementById('ttsProvider')?.value || 'azure';
             const voice = document.getElementById('ttsVoice')?.value || '';
             const rate = parseInt(document.getElementById('ttsRate')?.value || '0', 10);
             const explicitDialog = document.getElementById('ttsDialog')?.checked;
             const dialogue = explicitDialog || ttsIsDialogue(txt);
-            return {
+            // Studio lines take priority if non-empty
+            const studioLines = ttsLines.filter(l => (l.text || '').trim() && (l.voice || '').trim())
+                .map(l => ({ speaker: l.speaker || '', voice: l.voice, text: l.text }));
+            if (!txt && !studioLines.length) return null;
+            const payload = {
                 tts_enabled: true,
                 tts_provider: provider,
                 tts_text: txt,
@@ -212,7 +215,207 @@
                 tts_rate_pct: rate,
                 tts_dialogue: dialogue,
             };
+            if (studioLines.length) payload.tts_lines = studioLines;
+            return payload;
         }
+
+        // ═══════════ Studio (per-line voice picker) ═══════════
+        let ttsLines = [];  // [{speaker, voice, text}]
+        let ttsMode = 'text';  // 'text' | 'studio'
+
+        function _voicePoolFor(provider) {
+            return (TTS_VOICES[provider] || TTS_VOICES.azure).map(v => v);
+        }
+
+        function _heuristicVoiceFor(speaker, provider, usedFemale, usedMale) {
+            const sp = (speaker || '').toLowerCase();
+            const F = new Set(['żona','pani','ona','kobieta','dziewczyna','matka','córka','siostra',
+                'babcia','klientka','sprzedawczyni','lekarka','nauczycielka','kelnerka',
+                'ania','kasia','magda','agnieszka','zofia','ewa','marta','ola','monika','joanna','anna','maria','natalia']);
+            const M = new Set(['mąż','pan','on','mężczyzna','chłopak','ojciec','syn','brat',
+                'dziadek','klient','sprzedawca','lekarz','nauczyciel','kelner','pracownik','szef',
+                'adam','marek','tomek','piotr','michał','krzysztof','jakub','paweł','andrzej','jan']);
+            const pool = (provider === 'elevenlabs') ? {
+                f: ['pFZP5JQG7iQjIQuC4Bku','XB0fDUnXU5powFXDhCwa','EXAVITQu4vr4xnSDxMaL','21m00Tcm4TlvDq8ikWAM'],
+                m: ['onwK4e9ZLuTAKqWW03F9','IKne3meq5aSn9XLyUdCD','ErXwobaYiN019PkySvjV'],
+            } : {
+                f: ['pl-PL-AgnieszkaNeural','pl-PL-ZofiaNeural'],
+                m: ['pl-PL-MarekNeural'],
+            };
+            let gender = null;
+            if (F.has(sp)) gender = 'f';
+            else if (M.has(sp)) gender = 'm';
+            else if (sp.endsWith('a')) gender = 'f';
+            if (gender === 'f') return pool.f[usedFemale % pool.f.length];
+            if (gender === 'm') return pool.m[usedMale % pool.m.length];
+            // Unknown — alternate
+            return ((usedFemale + usedMale) % 2 === 0) ? pool.f[0] : pool.m[0];
+        }
+
+        function parseTextToLines() {
+            const txt = document.getElementById('ttsText')?.value || '';
+            const provider = document.getElementById('ttsProvider')?.value || 'azure';
+            const re = /^([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż' \-]{1,30}):\s*(.+?)\s*$/;
+            const out = [];
+            const speakerMap = {};
+            let uf = 0, um = 0;
+            for (const raw of txt.split('\n')) {
+                const s = raw.trim();
+                if (!s) continue;
+                const m = s.match(re);
+                if (m) {
+                    const sp = m[1].trim();
+                    if (!speakerMap[sp.toLowerCase()]) {
+                        const v = _heuristicVoiceFor(sp, provider, uf, um);
+                        speakerMap[sp.toLowerCase()] = v;
+                        const isF = new Set(['żona','pani','ona','kobieta','dziewczyna','klientka','sprzedawczyni','lekarka','kelnerka']).has(sp.toLowerCase()) || sp.toLowerCase().endsWith('a');
+                        if (isF) uf++; else um++;
+                    }
+                    out.push({ speaker: sp, voice: speakerMap[sp.toLowerCase()], text: m[2].trim() });
+                } else {
+                    // Narrator/continuation
+                    if (out.length) {
+                        out[out.length - 1].text += ' ' + s;
+                    } else {
+                        out.push({ speaker: '', voice: '', text: s });
+                    }
+                }
+            }
+            ttsLines = out;
+            renderTtsLines();
+        }
+
+        function renderTtsLines() {
+            const list = document.getElementById('ttsLinesList');
+            if (!list) return;
+            const provider = document.getElementById('ttsProvider')?.value || 'azure';
+            const voices = TTS_VOICES[provider] || TTS_VOICES.azure;
+            const voiceOpts = voices.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+            list.innerHTML = ttsLines.map((ln, idx) => `
+                <div class="tts-line-row" data-idx="${idx}" style="display:flex;gap:4px;align-items:center;margin-bottom:4px;">
+                    <input type="text" class="tts-line-speaker" data-idx="${idx}" value="${(ln.speaker||'').replace(/"/g,'&quot;')}" placeholder="Имя" style="width:75px;padding:3px;border:1px solid #ddd;border-radius:4px;font-size:.7rem;">
+                    <select class="tts-line-voice" data-idx="${idx}" style="width:130px;padding:3px;border:1px solid #ddd;border-radius:4px;font-size:.7rem;">${voiceOpts}</select>
+                    <input type="text" class="tts-line-text" data-idx="${idx}" value="${(ln.text||'').replace(/"/g,'&quot;')}" placeholder="Реплика" style="flex:1;padding:3px;border:1px solid #ddd;border-radius:4px;font-size:.72rem;">
+                    <button type="button" class="tts-line-preview" data-idx="${idx}" style="padding:3px 6px;border:1px solid #4CAF50;background:#fff;color:#2E7D32;border-radius:4px;cursor:pointer;font-size:.7rem;" title="Прослушать">▶</button>
+                    <button type="button" class="tts-line-remove" data-idx="${idx}" style="padding:3px 6px;border:1px solid #E53935;background:#fff;color:#E53935;border-radius:4px;cursor:pointer;font-size:.7rem;">×</button>
+                </div>
+            `).join('');
+            // Set voice select values
+            list.querySelectorAll('.tts-line-voice').forEach(sel => {
+                const i = +sel.dataset.idx;
+                if (ttsLines[i].voice) sel.value = ttsLines[i].voice;
+                else if (voices[0]) sel.value = voices[0].id;
+                ttsLines[i].voice = sel.value;
+            });
+            // Wire events
+            list.querySelectorAll('.tts-line-speaker').forEach(el => el.addEventListener('input', e => ttsLines[+e.target.dataset.idx].speaker = e.target.value));
+            list.querySelectorAll('.tts-line-voice').forEach(el => el.addEventListener('change', e => ttsLines[+e.target.dataset.idx].voice = e.target.value));
+            list.querySelectorAll('.tts-line-text').forEach(el => el.addEventListener('input', e => ttsLines[+e.target.dataset.idx].text = e.target.value));
+            list.querySelectorAll('.tts-line-remove').forEach(el => el.addEventListener('click', e => {
+                ttsLines.splice(+e.target.dataset.idx, 1);
+                renderTtsLines();
+            }));
+            list.querySelectorAll('.tts-line-preview').forEach(el => el.addEventListener('click', e => previewSingleLine(+e.target.dataset.idx)));
+            updateLinesStat();
+        }
+
+        function updateLinesStat() {
+            const stat = document.getElementById('ttsLinesStat');
+            if (!stat) return;
+            const total = ttsLines.reduce((s, l) => s + (l.text || '').length, 0);
+            stat.textContent = ttsLines.length + ' строк · ' + total + ' chars';
+        }
+
+        function addTtsLine() {
+            const last = ttsLines[ttsLines.length - 1];
+            const provider = document.getElementById('ttsProvider')?.value || 'azure';
+            const voices = TTS_VOICES[provider] || TTS_VOICES.azure;
+            // Alternate voice from last row
+            let nextVoice = voices[0]?.id || '';
+            if (last && last.voice) {
+                const idx = voices.findIndex(v => v.id === last.voice);
+                nextVoice = voices[(idx + 1) % voices.length].id;
+            }
+            ttsLines.push({ speaker: '', voice: nextVoice, text: '' });
+            renderTtsLines();
+        }
+
+        function syncStudioToText() {
+            const out = ttsLines.map(l => {
+                const sp = (l.speaker || '').trim();
+                return (sp ? sp + ': ' : '') + (l.text || '');
+            }).filter(Boolean).join('\n');
+            const ta = document.getElementById('ttsText');
+            if (ta) {
+                ta.value = out;
+                ta.dispatchEvent(new Event('input'));
+            }
+        }
+
+        async function previewSingleLine(idx) {
+            const ln = ttsLines[idx];
+            if (!ln || !ln.text.trim()) return;
+            const btn = document.querySelector('.tts-line-preview[data-idx="' + idx + '"]');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+            try {
+                const r = await fetch('/api/tts-preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: ln.text,
+                        provider: document.getElementById('ttsProvider').value,
+                        voice: ln.voice,
+                        rate_pct: 0,
+                    }),
+                });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                const buf = await r.arrayBuffer();
+                if (!window._ttsCtx) window._ttsCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const ctx = window._ttsCtx;
+                if (ctx.state === 'suspended') await ctx.resume();
+                const decoded = await ctx.decodeAudioData(buf.slice(0));
+                if (window._ttsLineSource) { try { window._ttsLineSource.stop(); } catch (_) {} }
+                const src = ctx.createBufferSource();
+                src.buffer = decoded;
+                src.connect(ctx.destination);
+                src.start(0);
+                window._ttsLineSource = src;
+            } catch (e) {
+                console.error('[tts-line] preview failed:', e);
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = '▶'; }
+            }
+        }
+
+        function setTtsMode(mode) {
+            ttsMode = mode;
+            const txt = document.getElementById('ttsText');
+            const studio = document.getElementById('ttsStudio');
+            const btnT = document.getElementById('ttsModeText');
+            const btnS = document.getElementById('ttsModeStudio');
+            const setActive = (b, on) => {
+                if (!b) return;
+                b.style.background = on ? '#4CAF50' : '#fff';
+                b.style.color = on ? '#fff' : '#555';
+                b.style.borderColor = on ? '#4CAF50' : '#ddd';
+            };
+            setActive(btnT, mode === 'text');
+            setActive(btnS, mode === 'studio');
+            if (mode === 'studio') {
+                if (txt) txt.style.display = 'none';
+                if (studio) studio.style.display = 'block';
+                if (!ttsLines.length) parseTextToLines();
+                else renderTtsLines();
+            } else {
+                if (txt) txt.style.display = '';
+                if (studio) studio.style.display = 'none';
+            }
+        }
+
+        window.setTtsMode = setTtsMode;
+        window.addTtsLine = addTtsLine;
+        window.syncStudioToText = syncStudioToText;
+        window.parseTextToLines = parseTextToLines;
 
         let _ttsLastBlobUrl = null;
         async function ttsPreview() {
@@ -225,6 +428,10 @@
             hint.textContent = '';
             try {
                 const dialog = document.getElementById('ttsDialog')?.checked || ttsIsDialogue(text);
+                const studioLines = (typeof ttsLines !== 'undefined' && ttsMode === 'studio')
+                    ? ttsLines.filter(l => (l.text || '').trim() && (l.voice || '').trim())
+                              .map(l => ({ voice: l.voice, text: l.text }))
+                    : null;
                 const r = await fetch('/api/tts-preview', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -234,6 +441,7 @@
                         voice: document.getElementById('ttsVoice').value,
                         rate_pct: parseInt(document.getElementById('ttsRate').value, 10),
                         dialogue: dialog,
+                        lines: studioLines && studioLines.length ? studioLines : undefined,
                     }),
                 });
                 if (!r.ok) {

@@ -816,6 +816,28 @@ def _ffmpeg_concat_to_ogg(segments_mp3: list) -> bytes:
             return f.read()
 
 
+async def _synth_dialogue_lines(lines, provider: str = "elevenlabs"):
+    """Synthesize explicit list of (voice_id, text) lines into single OGG/Opus.
+    Skips empty/voiceless rows. Concat via ffmpeg with 350ms silence between.
+    """
+    mp3_chunks = []
+    for ln in lines or []:
+        text = (ln.get("text") or "").strip()
+        voice = (ln.get("voice") or "").strip()
+        if not text or not voice:
+            continue
+        audio = await _dispatch_synth(provider, text, voice=voice, rate_pct=0, fmt="mp3")
+        if audio:
+            mp3_chunks.append(audio)
+    if not mp3_chunks:
+        return None
+    try:
+        return await asyncio.get_event_loop().run_in_executor(None, _ffmpeg_concat_to_ogg, mp3_chunks)
+    except subprocess.CalledProcessError as e:
+        log.error("ffmpeg concat (explicit lines) failed: %s", (e.stderr or b"")[:300])
+        return None
+
+
 async def _synth_dialogue(text: str, provider: str = "elevenlabs", voice_pool: dict = None):
     """Synthesize a multi-speaker dialogue and return OGG/Opus bytes (Telegram-ready)."""
     segments = _split_dialogue(text)
@@ -871,9 +893,12 @@ async def _maybe_send_voice_reply(entity, card: dict, reply_to_msg_id: int, sche
     except (TypeError, ValueError):
         rate_pct = 0
 
-    # Auto-detect dialogue (or explicit flag) → multi-voice synth
+    # Priority: explicit per-line voicing (Studio mode) → auto-detect dialogue → single voice
+    lines = card.get("tts_lines")
     dialogue_mode = card.get("tts_dialogue") or _is_dialogue(text)
-    if dialogue_mode:
+    if lines and isinstance(lines, list) and any((l or {}).get("text") for l in lines):
+        audio = await _synth_dialogue_lines(lines, provider=provider)
+    elif dialogue_mode:
         audio = await _synth_dialogue(text, provider=provider)
     else:
         audio = await _dispatch_synth(provider, text, voice=voice, rate_pct=rate_pct, fmt="ogg")
@@ -1012,12 +1037,13 @@ async def handle_tts_preview(request):
         return web.json_response({"ok": False, "error": "AZURE_SPEECH_KEY not configured"}, status=500)
     # Browsers (esp. Windows Chrome) play MP3 universally; OGG/Opus is hit-or-miss.
     fmt = (data.get("format") or "mp3").lower()
+    lines = data.get("lines")
     dialogue_mode = bool(data.get("dialogue")) or _is_dialogue(text)
-    if dialogue_mode:
+    if lines and isinstance(lines, list) and any((l or {}).get("text") for l in lines):
+        audio = await _synth_dialogue_lines(lines, provider=provider)
+        ctype = "audio/ogg"
+    elif dialogue_mode:
         audio = await _synth_dialogue(text, provider=provider)
-        # _synth_dialogue returns OGG/Opus; if browser wants mp3 we'd need to re-encode.
-        # For simplicity force ogg in dialogue mode (Chrome plays OGG/Opus fine in current builds;
-        # if it doesn't, frontend will fall back to Web Audio).
         ctype = "audio/ogg"
     else:
         audio = await _dispatch_synth(provider, text, voice=voice, rate_pct=rate_pct, fmt=fmt)
