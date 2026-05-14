@@ -28,47 +28,27 @@
             <section class="surface panel--controls" aria-label="Настройки">
 
                 <div class="presets-bar">
-                    <button class="preset-btn is-save" type="button" onclick="savePreset()">💾 Сохранить</button>
-                    <button class="preset-btn" type="button" onclick="loadPreset(1)">1</button>
-                    <button class="preset-btn" type="button" onclick="loadPreset(2)">2</button>
-                    <button class="preset-btn" type="button" onclick="loadPreset(3)">3</button>
-                    <button class="preset-btn" type="button" onclick="clearPresets()" title="Очистить пресеты">🗑</button>
+                    <button class="preset-btn is-save" type="button" onclick="savePreset()" title="Сохранить в первый свободный слот (Cmd+S)">💾 Быстрое сохр.</button>
+                    <button class="preset-btn" type="button" onclick="clearPresets()" title="Очистить все слоты">🗑</button>
                     <button class="preset-btn is-queue" type="button" onclick="openQueueModal()">📋 Очередь</button>
                 </div>
 
+                <details class="section" open>
+                    <summary>📂 Сохранённые карточки</summary>
+                    <div class="section-body">
+                        <div class="preset-slots" id="presetSlots"></div>
+                    </div>
+                </details>
+
                 <h2>Шаблон</h2>
                 <div class="tile-grid tile-grid--templates" id="templates">
-                    <button class="tile template-btn active" data-template="ciekawostka" data-badge="CIEKAWOSTKA DNIA" type="button">
-                        <span class="ico">🧠</span>
-                        <span class="lbl">Ciekawostka</span>
-                    </button>
-                    <button class="tile template-btn" data-template="slowo" data-badge="SŁOWO DNIA" type="button">
+                    <button class="tile template-btn active" data-template="slowo" data-badge="SŁOWO DNIA" type="button">
                         <span class="ico">🇵🇱</span>
                         <span class="lbl">Słowo dnia</span>
                     </button>
-                    <button class="tile template-btn" data-template="quiz" data-badge="QUIZ TIME" type="button">
-                        <span class="ico">❓</span>
-                        <span class="lbl">Quiz</span>
-                    </button>
-                    <button class="tile template-btn" data-template="ankieta" data-badge="ANKIETA" type="button">
-                        <span class="ico">📊</span>
-                        <span class="lbl">Ankieta</span>
-                    </button>
-                    <button class="tile template-btn" data-template="sluchanie" data-badge="SŁUCHANIE" type="button">
+                    <button class="tile template-btn" data-template="sluchanie" data-badge="AUDIO" type="button">
                         <span class="ico">🎧</span>
-                        <span class="lbl">Słuchanie</span>
-                    </button>
-                    <button class="tile template-btn" data-template="blad" data-badge="BŁĄD DNIA" type="button">
-                        <span class="ico">⚠️</span>
-                        <span class="lbl">Błąd dnia</span>
-                    </button>
-                    <button class="tile template-btn" data-template="podsluchano" data-badge="PODSLUCHANO W ŻABCE" type="button">
-                        <span class="ico">👂</span>
-                        <span class="lbl">Podsluchano</span>
-                    </button>
-                    <button class="tile template-btn" data-template="gramatyka" data-badge="GRAMATYKA" type="button">
-                        <span class="ico">📝</span>
-                        <span class="lbl">Gramatyka</span>
+                        <span class="lbl">Audio</span>
                     </button>
                     <button class="tile template-btn" data-template="custom" data-badge="" type="button">
                         <span class="ico">✏️</span>
@@ -78,25 +58,9 @@
 
                 <h2 style="margin-top:var(--s-4)">Контент</h2>
 
-                <div class="field-grid">
-                    <div class="field">
-                        <label for="header-title">Заголовок шапки</label>
-                        <input type="text" id="header-title" value="Польский язык на каждый день">
-                    </div>
-                    <div class="field">
-                        <label for="footer-username">Юзернейм (футер)</label>
-                        <input type="text" id="footer-username" value="@Polski_Daily">
-                    </div>
-                </div>
-
-                <div class="field">
-                    <label for="badge-text">Рубрика (badge)</label>
-                    <input type="text" id="badge-text" value="CIEKAWOSTKA DNIA">
-                </div>
-
                 <div class="field">
                     <label for="main-word">Главное слово / фраза</label>
-                    <textarea id="main-word" rows="2">Zmierzchnica trupia główka</textarea>
+                    <textarea id="main-word" rows="2"></textarea>
                 </div>
 
                 <div class="field-grid">
@@ -112,7 +76,7 @@
 
                 <div class="field">
                     <label for="subtitle">Подзаголовок / вопрос</label>
-                    <textarea id="subtitle" rows="2">Jak myślicie, co to jest?</textarea>
+                    <textarea id="subtitle" rows="2"></textarea>
                 </div>
 
                 <div class="field" id="example-group">
@@ -384,6 +348,24 @@
                     </div>
                 </details>
 
+                <details class="section">
+                    <summary>🏷️ Шапка / Футер <span class="muted small">· редко меняется</span></summary>
+                    <div class="section-body">
+                        <div class="field">
+                            <label for="header-title">Заголовок шапки</label>
+                            <input type="text" id="header-title" value="Польский язык на каждый день">
+                        </div>
+                        <div class="field">
+                            <label for="footer-username">Юзернейм (футер)</label>
+                            <input type="text" id="footer-username" value="@Polski_Daily">
+                        </div>
+                        <div class="field">
+                            <label for="badge-text">Рубрика (badge)</label>
+                            <input type="text" id="badge-text" value="SŁOWO DNIA">
+                        </div>
+                    </div>
+                </details>
+
             </section>
 
             <!-- ═══════════════ PREVIEW ═══════════════ -->
@@ -591,9 +573,6 @@
                     <label>Шаблон</label>
                     <select id="qTemplate">
                         <option value="slowo" selected>Słowo dnia</option>
-                        <option value="ciekawostka">Ciekawostka</option>
-                        <option value="blad">Błąd dnia</option>
-                        <option value="podsluchano">Podsłuchano</option>
                         <option value="custom">Своя</option>
                     </select>
                 </div>

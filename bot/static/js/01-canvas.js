@@ -9,7 +9,7 @@
         const baseWidth = 540;
 
         let currentFormat = 'square';
-        let currentTemplate = 'ciekawostka';
+        let currentTemplate = 'slowo';
         let currentMascot = 'happy';
         let bgImage = null;
         let overlayColor = 'black';

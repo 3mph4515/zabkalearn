@@ -369,7 +369,7 @@
             if (!state) return;
 
             // Set template
-            currentTemplate = state.template || 'ciekawostka';
+            currentTemplate = state.template || 'slowo';
             document.querySelectorAll('.template-btn').forEach(b => {
                 b.classList.toggle('active', b.dataset.template === currentTemplate);
             });
@@ -488,34 +488,150 @@
             drawCard();
         }
 
-        function savePreset() {
-            const state = getCardState();
-            localStorage.setItem('cardPreset_' + currentPresetSlot, JSON.stringify(state));
-            if (typeof pubToast === 'function') pubToast('💾 Пресет ' + currentPresetSlot + ' сохранён', 'ok');
-            else alert('Пресет ' + currentPresetSlot + ' сохранён!');
-        }
+        // Presets v2: array of 8 slots, each { name, state, thumb, ts } or null.
+        const PRESETS_KEY = 'presetsV2';
+        const PRESET_SLOTS_COUNT = 8;
 
-        function loadPreset(slot) {
-            currentPresetSlot = slot;
-            const saved = localStorage.getItem('cardPreset_' + slot);
-            if (saved) {
-                applyCardState(JSON.parse(saved));
-                if (typeof pubToast === 'function') pubToast('📂 Пресет ' + slot + ' загружен', 'ok');
-            } else {
-                if (typeof pubToast === 'function') pubToast('Пресет ' + slot + ' пуст', 'er');
-                else alert('Пресет ' + slot + ' пуст');
-            }
-        }
-
-        function clearPresets() {
-            if (confirm('Удалить все пресеты?')) {
-                for (let i = 1; i <= 3; i++) {
-                    localStorage.removeItem('cardPreset_' + i);
+        function getPresetsV2() {
+            try {
+                const raw = localStorage.getItem(PRESETS_KEY);
+                if (!raw) {
+                    const migrated = new Array(PRESET_SLOTS_COUNT).fill(null);
+                    for (let i = 1; i <= 3; i++) {
+                        const legacy = localStorage.getItem('cardPreset_' + i);
+                        if (legacy) {
+                            try {
+                                migrated[i - 1] = {
+                                    name: 'Пресет ' + i,
+                                    state: JSON.parse(legacy),
+                                    thumb: null,
+                                    ts: Date.now()
+                                };
+                            } catch (e) { /* skip bad */ }
+                        }
+                    }
+                    if (migrated.some(p => p)) {
+                        localStorage.setItem(PRESETS_KEY, JSON.stringify(migrated));
+                    }
+                    return migrated;
                 }
-                if (typeof pubToast === 'function') pubToast('🗑 Пресеты удалены', 'ok');
-                else alert('Пресеты удалены');
+                const arr = JSON.parse(raw);
+                if (!Array.isArray(arr)) return new Array(PRESET_SLOTS_COUNT).fill(null);
+                while (arr.length < PRESET_SLOTS_COUNT) arr.push(null);
+                return arr;
+            } catch (e) {
+                return new Array(PRESET_SLOTS_COUNT).fill(null);
             }
         }
+
+        function setPresetsV2(arr) {
+            try {
+                localStorage.setItem(PRESETS_KEY, JSON.stringify(arr));
+            } catch (e) {
+                if (typeof pubToast === 'function') pubToast('⚠️ Хранилище переполнено', 'er');
+            }
+        }
+
+        function capturePresetThumb() {
+            try {
+                const c = document.getElementById('card-preview');
+                return c ? c.toDataURL('image/jpeg', 0.55) : null;
+            } catch (e) { return null; }
+        }
+
+        function escHtmlPreset(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
+        }
+
+        function saveToSlot(slot) {
+            const arr = getPresetsV2();
+            const state = getCardState();
+            const prevName = arr[slot] && arr[slot].name;
+            const word = (state.mainWord || '').trim().split(/\s+/)[0] || '';
+            const fallbackName = word ? word.slice(0, 18) : ('Слот ' + (slot + 1));
+            arr[slot] = {
+                name: prevName || fallbackName,
+                state,
+                thumb: capturePresetThumb(),
+                ts: Date.now()
+            };
+            setPresetsV2(arr);
+            renderPresets();
+            if (typeof pubToast === 'function') pubToast('💾 ' + arr[slot].name, 'ok');
+        }
+
+        function loadFromSlot(slot) {
+            const arr = getPresetsV2();
+            const p = arr[slot];
+            if (!p) {
+                if (typeof pubToast === 'function') pubToast('Слот пуст', 'er');
+                return;
+            }
+            applyCardState(p.state);
+            if (typeof pubToast === 'function') pubToast('📂 ' + p.name, 'ok');
+        }
+
+        function deleteSlot(slot) {
+            const arr = getPresetsV2();
+            if (!arr[slot]) return;
+            if (!confirm('Удалить слот «' + arr[slot].name + '»?')) return;
+            arr[slot] = null;
+            setPresetsV2(arr);
+            renderPresets();
+        }
+
+        function renamePresetSlot(slot, name) {
+            const arr = getPresetsV2();
+            if (!arr[slot]) return;
+            arr[slot].name = (name || '').trim().slice(0, 20) || ('Слот ' + (slot + 1));
+            setPresetsV2(arr);
+        }
+
+        function renderPresets() {
+            const cont = document.getElementById('presetSlots');
+            if (!cont) return;
+            const arr = getPresetsV2();
+            cont.innerHTML = arr.map((p, i) => {
+                if (!p) {
+                    return `<button class="preset-slot preset-slot--empty" type="button" onclick="saveToSlot(${i})" title="Сохранить в слот ${i + 1}">
+                        <span class="ico">＋</span>
+                        <span class="lbl">Слот ${i + 1}</span>
+                    </button>`;
+                }
+                const thumb = p.thumb
+                    ? `<img src="${p.thumb}" alt="">`
+                    : `<div class="preset-slot-noimg">📭</div>`;
+                return `<div class="preset-slot" data-slot="${i}">
+                    <div class="preset-thumb" onclick="loadFromSlot(${i})">${thumb}</div>
+                    <input class="preset-name" value="${escHtmlPreset(p.name)}" onchange="renamePresetSlot(${i}, this.value)" maxlength="20">
+                    <div class="preset-slot-actions">
+                        <button type="button" onclick="saveToSlot(${i})" title="Перезаписать">💾</button>
+                        <button type="button" onclick="deleteSlot(${i})" title="Удалить">🗑</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Legacy compat (hotkey Cmd+S, queue/etc.)
+        function savePreset() {
+            const arr = getPresetsV2();
+            let target = arr.findIndex(p => !p);
+            if (target === -1) target = arr.length - 1;
+            saveToSlot(target);
+        }
+        function loadPreset(slot) {
+            loadFromSlot((slot | 0) - 1);
+        }
+        function clearPresets() {
+            if (!confirm('Удалить ВСЕ сохранённые карточки?')) return;
+            setPresetsV2(new Array(PRESET_SLOTS_COUNT).fill(null));
+            renderPresets();
+            if (typeof pubToast === 'function') pubToast('🗑 Все слоты очищены', 'ok');
+        }
+
+        renderPresets();
 
         // Copy to clipboard
         async function copyToClipboard() {
