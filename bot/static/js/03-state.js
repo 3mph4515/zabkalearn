@@ -546,6 +546,38 @@
             } catch (e) {
                 if (typeof pubToast === 'function') pubToast('⚠️ Хранилище переполнено', 'er');
             }
+            schedulePresetsServerSync();
+        }
+
+        let presetsSyncTimer = null;
+        function schedulePresetsServerSync() {
+            clearTimeout(presetsSyncTimer);
+            presetsSyncTimer = setTimeout(pushPresetsToServer, 600);
+        }
+
+        async function pushPresetsToServer() {
+            try {
+                const arr = getPresetsV2();
+                await fetch('/api/presets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ presets: arr }),
+                });
+            } catch (e) { /* offline / network ok to ignore */ }
+        }
+
+        async function pullPresetsFromServer() {
+            try {
+                const r = await fetch('/api/presets');
+                if (!r.ok) return;
+                const data = await r.json();
+                if (!data || !data.ok || !Array.isArray(data.presets)) return;
+                const remote = data.presets.slice();
+                while (remote.length < PRESET_SLOTS_COUNT) remote.push(null);
+                if (!remote.some(p => p)) return; // server empty, keep local
+                localStorage.setItem(PRESETS_KEY, JSON.stringify(remote));
+                renderPresets();
+            } catch (e) { /* network — local stays */ }
         }
 
         function capturePresetThumb() {
@@ -648,6 +680,7 @@
         }
 
         renderPresets();
+        pullPresetsFromServer();
 
         // Copy to clipboard
         async function copyToClipboard() {

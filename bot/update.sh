@@ -17,14 +17,12 @@ if [ "$1" == "--no-version" ]; then
     SKIP_VERSION=true
 fi
 
-CURRENT_VERSION=$(grep -o 'class="version">v[0-9.]*' "$HTML_FILE" | grep -o '[0-9.]*' | head -1)
-
-if [ -z "$CURRENT_VERSION" ]; then
-    echo "❌ Не могу найти текущую версию в index.html"
-    exit 1
-fi
-
 if [ "$SKIP_VERSION" = false ]; then
+    CURRENT_VERSION=$(grep -o 'class="version">v[0-9.]*' "$HTML_FILE" | grep -o '[0-9.]*' | head -1)
+    if [ -z "$CURRENT_VERSION" ]; then
+        echo "❌ Не могу найти текущую версию в index.html"
+        exit 1
+    fi
     MAJOR=$(echo "$CURRENT_VERSION" | cut -d. -f1)
     MINOR=$(echo "$CURRENT_VERSION" | cut -d. -f2)
     NEW_MINOR=$((MINOR + 1))
@@ -35,8 +33,8 @@ if [ "$SKIP_VERSION" = false ]; then
     sed -i '' "s/VERSION = \"$CURRENT_VERSION\"/VERSION = \"$NEW_VERSION\"/" "$BOT_FILE"
     echo "✅ Версия обновлена"
 else
-    NEW_VERSION=$CURRENT_VERSION
-    echo "🐸 Деплой без изменения версии: v$CURRENT_VERSION"
+    NEW_VERSION="(no-version)"
+    echo "🐸 Деплой без изменения версии"
 fi
 
 echo "📦 Деплою на $VPS:$REMOTE_DIR ..."

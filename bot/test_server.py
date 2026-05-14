@@ -9,6 +9,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 JS_DIR = os.path.join(BASE_DIR, "static", "js")
+TEST_PRESETS_FILE = os.path.join(BASE_DIR, ".test_presets.json")
 
 
 def bundle_js() -> str:
@@ -64,11 +65,21 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/check-word":
             self._json({"ok": True, "exists": False, "matches": []})
             return
+        if p == "/api/presets":
+            presets = []
+            if os.path.exists(TEST_PRESETS_FILE):
+                try:
+                    with open(TEST_PRESETS_FILE, "r", encoding="utf-8") as f:
+                        presets = json.load(f)
+                except Exception:
+                    pass
+            self._json({"ok": True, "presets": presets})
+            return
         self._send(404, b"not found")
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length") or 0)
-        _ = self.rfile.read(length)
+        body = self.rfile.read(length)
         p = self.path.split("?", 1)[0]
         if p == "/api/schedule":
             self._json({"ok": True, "results": [{"ok": True}]})
@@ -78,6 +89,19 @@ class Handler(BaseHTTPRequestHandler):
             return
         if p == "/api/tts-test-all":
             self._json({"ok": True, "count": 10, "results": [{"ok": True}] * 10})
+            return
+        if p == "/api/presets":
+            try:
+                data = json.loads(body or b"{}")
+                presets = data.get("presets")
+                if isinstance(presets, list):
+                    with open(TEST_PRESETS_FILE, "w", encoding="utf-8") as f:
+                        json.dump(presets, f, ensure_ascii=False)
+                    self._json({"ok": True})
+                    return
+            except Exception:
+                pass
+            self._json({"ok": False, "error": "Bad payload"}, status=400)
             return
         self._send(404, b"not found")
 

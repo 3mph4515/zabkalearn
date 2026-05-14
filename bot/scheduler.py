@@ -110,6 +110,9 @@ CHANNELS = {
 }
 
 WORD_HISTORY_FILE = os.path.join(BASE_DIR, "word_history.json")
+PRESETS_FILE = os.path.join(BASE_DIR, "presets.json")
+PRESETS_MAX_BYTES = 5 * 1024 * 1024
+PRESETS_MAX_SLOTS = 16
 WORD_HISTORY_TTL_SEC = 60 * 30  # 30 min cache
 WORD_HISTORY_FETCH_LIMIT = 1000
 
@@ -288,6 +291,47 @@ def save_word_history(data):
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     os.replace(tmp, WORD_HISTORY_FILE)
+
+
+def load_presets():
+    if not os.path.exists(PRESETS_FILE):
+        return []
+    try:
+        with open(PRESETS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def save_presets(data):
+    tmp = PRESETS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+    os.replace(tmp, PRESETS_FILE)
+
+
+async def handle_presets_get(request):
+    return web.json_response({"ok": True, "presets": load_presets()})
+
+
+async def handle_presets_post(request):
+    try:
+        raw_bytes = await request.read()
+    except Exception:
+        return web.json_response({"ok": False, "error": "Bad body"}, status=400)
+    if len(raw_bytes) > PRESETS_MAX_BYTES:
+        return web.json_response({"ok": False, "error": "Payload too large"}, status=413)
+    try:
+        data = json.loads(raw_bytes)
+    except Exception:
+        return web.json_response({"ok": False, "error": "Bad JSON"}, status=400)
+    presets = data.get("presets") if isinstance(data, dict) else None
+    if not isinstance(presets, list):
+        return web.json_response({"ok": False, "error": "Expected presets array"}, status=400)
+    if len(presets) > PRESETS_MAX_SLOTS:
+        return web.json_response({"ok": False, "error": "Too many slots"}, status=400)
+    save_presets(presets)
+    return web.json_response({"ok": True})
 
 
 def extract_word_from_message(text):
@@ -1317,6 +1361,8 @@ async def start_app():
     app.router.add_post("/api/reschedule", handle_reschedule)
     app.router.add_get("/api/word-history", handle_word_history)
     app.router.add_get("/api/check-word", handle_check_word)
+    app.router.add_get("/api/presets", handle_presets_get)
+    app.router.add_post("/api/presets", handle_presets_post)
     app.router.add_post("/api/tts-preview", handle_tts_preview)
     app.router.add_post("/api/tts-test-all", handle_tts_test_all)
     app.router.add_get("/static/js/editor-bundle.js", handle_editor_js_bundle)
