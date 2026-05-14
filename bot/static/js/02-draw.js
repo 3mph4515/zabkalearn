@@ -106,11 +106,10 @@
                 const required = probeCardHeight(size.w, size.h);
                 const cap = size.w * 1.65;
                 const finalH = Math.min(Math.max(size.h, required), cap);
-                if (Math.abs(parseFloat(canvas.style.height || '0') - finalH) > 1) {
+                const prevH = canvas.height / dpr;
+                if (Math.abs(prevH - finalH) > 1) {
                     canvas.width = size.w * dpr;
                     canvas.height = finalH * dpr;
-                    canvas.style.width = size.w + 'px';
-                    canvas.style.height = finalH + 'px';
                     ctx = canvas.getContext('2d');
                     ctx.scale(dpr, dpr);
                 }

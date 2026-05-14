@@ -63,8 +63,6 @@
             const size = getCanvasSize();
             canvas.width = size.w * dpr;
             canvas.height = size.h * dpr;
-            canvas.style.width = size.w + 'px';
-            canvas.style.height = size.h + 'px';
             ctx = canvas.getContext('2d');
             ctx.scale(dpr, dpr);
         }
