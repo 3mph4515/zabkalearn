@@ -224,8 +224,18 @@
                     schedule_time: scheduleTime || new Date().toISOString().slice(0, 16),
                     image: imageData,
                 };
-                // Poll/quiz override
-                if (typeof getPollPayload === 'function') {
+                // Audio template uses quiz chain (multiple polls as replies).
+                // Other poll templates use legacy single-poll payload.
+                const isAudio = typeof isAudioTemplate === 'function' && isAudioTemplate();
+                if (isAudio && typeof getQuizChainPayload === 'function') {
+                    const chain = getQuizChainPayload();
+                    if (chain && chain.error) {
+                        pubToast(chain.error, 'er');
+                        btn.disabled = false; btn.textContent = origText;
+                        return;
+                    }
+                    if (chain) Object.assign(cardPayload, chain);
+                } else if (typeof getPollPayload === 'function') {
                     const poll = getPollPayload();
                     if (poll && poll.error) {
                         pubToast(poll.error, 'er');
@@ -618,7 +628,16 @@
                         schedule_time: dateToWarsawIso(date),
                         image: imageData,
                     };
-                    if (typeof getPollPayload === 'function') {
+                    const isAudio = typeof isAudioTemplate === 'function' && isAudioTemplate();
+                    if (isAudio && typeof getQuizChainPayload === 'function') {
+                        const chain = getQuizChainPayload();
+                        if (chain && chain.error) {
+                            pubToast(chain.error, 'er');
+                            btn.disabled = false; btn.textContent = 'В отложку → след.';
+                            return;
+                        }
+                        if (chain) Object.assign(qCard, chain);
+                    } else if (typeof getPollPayload === 'function') {
                         const poll = getPollPayload();
                         if (poll && poll.error) {
                             pubToast(poll.error, 'er');

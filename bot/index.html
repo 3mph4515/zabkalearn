@@ -100,7 +100,17 @@
                     </div>
                 </div>
 
-                <!-- Poll/Quiz options (visible for quiz/ankieta/sluchanie) -->
+                <!-- Audio template: chain of N quizzes -->
+                <div class="field" id="quiz-chain-section" style="display:none">
+                    <label>
+                        🎧 Цепочка квизов к аудио
+                        <span class="muted small">· каждый квиз — отдельный poll-реплай</span>
+                    </label>
+                    <div id="quiz-chain-list"></div>
+                    <button type="button" class="add-inline-btn" onclick="addQuizToChain()">+ Добавить квиз</button>
+                </div>
+
+                <!-- Poll/Quiz options (legacy single-poll, only for quiz/ankieta) -->
                 <div class="field" id="quiz-options-group">
                     <label>
                         Варианты ответа

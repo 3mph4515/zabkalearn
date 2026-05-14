@@ -113,18 +113,21 @@
         function updatePollUIForTemplate() {
             const isPoll = isPollTemplate();
             const isQuiz = isQuizTemplate();
+            const isAudio = typeof isAudioTemplate === 'function' && isAudioTemplate();
             const grp = document.getElementById('quiz-options-group');
-            if (grp) grp.style.display = isPoll ? 'block' : 'none';
+            // Audio template uses the chain UI — hide legacy single-poll panel.
+            if (grp) grp.style.display = (isPoll && !isAudio) ? 'block' : 'none';
             const solGrp = document.getElementById('poll-solution-group');
-            if (solGrp) solGrp.style.display = isQuiz ? 'block' : 'none';
+            if (solGrp) solGrp.style.display = (isQuiz && !isAudio) ? 'block' : 'none';
             const multiRow = document.getElementById('poll-multi-row');
-            if (multiRow) multiRow.style.display = (isPoll && !isQuiz) ? 'flex' : 'none';
+            if (multiRow) multiRow.style.display = (isPoll && !isQuiz && !isAudio) ? 'flex' : 'none';
             const hint = document.getElementById('poll-mode-hint');
             if (hint) {
                 hint.textContent = isQuiz ? '⓵ выбери правильный'
                     : (document.getElementById('poll-multiple')?.checked ? '☑ можно несколько' : '');
             }
-            if (isPoll) renderPollOptions();
+            if (isPoll && !isAudio) renderPollOptions();
+            if (typeof updateAudioChainUI === 'function') updateAudioChainUI();
         }
 
         // Wire multi-choice toggle to re-render
@@ -141,6 +144,156 @@
         window.getPollPayload = getPollPayload;
         window.updatePollUIForTemplate = updatePollUIForTemplate;
         window.renderPollOptions = renderPollOptions;
+
+        // ═══════════ Quiz chain (audio template) ═══════════
+        const QUIZ_CHAIN_MAX = 5;
+
+        let quizChain = [
+            { question: '', options: [{text:'',correct:false},{text:'',correct:false},{text:'',correct:false}], solution: '' }
+        ];
+
+        function isAudioTemplate() {
+            return typeof currentTemplate !== 'undefined' && currentTemplate === 'sluchanie';
+        }
+
+        function escHtmlAttr(s) {
+            return String(s == null ? '' : s).replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        }
+
+        function renderQuizChain() {
+            const cont = document.getElementById('quiz-chain-list');
+            if (!cont) return;
+            cont.innerHTML = quizChain.map((q, qi) => {
+                const optsHtml = q.options.map((opt, oi) => `
+                    <div class="qb-opt${opt.correct ? ' correct' : ''}">
+                        <input type="radio" name="qb-${qi}" data-qi="${qi}" data-oi="${oi}" ${opt.correct ? 'checked' : ''}>
+                        <input type="text" class="qb-opt-text" data-qi="${qi}" data-oi="${oi}"
+                               value="${escHtmlAttr(opt.text)}"
+                               placeholder="Вариант ${oi + 1}" maxlength="100">
+                        <button type="button" class="qb-opt-rm" data-qi="${qi}" data-oi="${oi}" title="Удалить">×</button>
+                    </div>
+                `).join('');
+                return `
+                    <div class="quiz-block" data-qi="${qi}">
+                        <div class="qb-head">
+                            <span class="qb-no">Квиз ${qi + 1}</span>
+                            <button type="button" class="qb-rm" data-qi="${qi}" title="Удалить квиз">🗑</button>
+                        </div>
+                        <textarea class="qb-q" data-qi="${qi}" rows="2"
+                                  placeholder="Вопрос (например: Чего хочет клиент?)" maxlength="300">${escHtmlAttr(q.question)}</textarea>
+                        <div class="qb-opts">${optsHtml}</div>
+                        <button type="button" class="qb-add-opt" data-qi="${qi}">+ Вариант</button>
+                        <textarea class="qb-sol" data-qi="${qi}" rows="2"
+                                  placeholder="Объяснение (отправится reply под спойлером)" maxlength="200">${escHtmlAttr(q.solution)}</textarea>
+                    </div>
+                `;
+            }).join('');
+            wireQuizChainEvents();
+        }
+
+        function wireQuizChainEvents() {
+            const list = document.getElementById('quiz-chain-list');
+            if (!list) return;
+            list.querySelectorAll('.qb-q').forEach(el => el.addEventListener('input', e => {
+                quizChain[+e.target.dataset.qi].question = e.target.value;
+            }));
+            list.querySelectorAll('.qb-sol').forEach(el => el.addEventListener('input', e => {
+                quizChain[+e.target.dataset.qi].solution = e.target.value;
+            }));
+            list.querySelectorAll('.qb-opt-text').forEach(el => el.addEventListener('input', e => {
+                quizChain[+e.target.dataset.qi].options[+e.target.dataset.oi].text = e.target.value;
+            }));
+            list.querySelectorAll('input[type="radio"]').forEach(el => el.addEventListener('change', e => {
+                const qi = +e.target.dataset.qi;
+                const oi = +e.target.dataset.oi;
+                quizChain[qi].options.forEach((o, k) => o.correct = (k === oi));
+                renderQuizChain();
+            }));
+            list.querySelectorAll('.qb-opt-rm').forEach(el => el.addEventListener('click', e => {
+                const qi = +e.currentTarget.dataset.qi;
+                const oi = +e.currentTarget.dataset.oi;
+                if (quizChain[qi].options.length <= 2) {
+                    pubToast('Минимум 2 варианта', 'er');
+                    return;
+                }
+                quizChain[qi].options.splice(oi, 1);
+                renderQuizChain();
+            }));
+            list.querySelectorAll('.qb-add-opt').forEach(el => el.addEventListener('click', e => {
+                const qi = +e.currentTarget.dataset.qi;
+                if (quizChain[qi].options.length >= 10) {
+                    pubToast('Максимум 10 вариантов', 'er');
+                    return;
+                }
+                quizChain[qi].options.push({ text: '', correct: false });
+                renderQuizChain();
+            }));
+            list.querySelectorAll('.qb-rm').forEach(el => el.addEventListener('click', e => {
+                const qi = +e.currentTarget.dataset.qi;
+                if (quizChain.length <= 1) {
+                    pubToast('Должен быть хотя бы 1 квиз', 'er');
+                    return;
+                }
+                if (!confirm('Удалить квиз ' + (qi + 1) + '?')) return;
+                quizChain.splice(qi, 1);
+                renderQuizChain();
+            }));
+        }
+
+        function addQuizToChain() {
+            if (quizChain.length >= QUIZ_CHAIN_MAX) {
+                pubToast('Максимум ' + QUIZ_CHAIN_MAX + ' квизов', 'er');
+                return;
+            }
+            quizChain.push({
+                question: '',
+                options: [{text:'',correct:false},{text:'',correct:false},{text:'',correct:false}],
+                solution: ''
+            });
+            renderQuizChain();
+        }
+
+        function getQuizChainPayload() {
+            if (!isAudioTemplate()) return null;
+            const out = [];
+            for (let i = 0; i < quizChain.length; i++) {
+                const q = quizChain[i];
+                const opts = q.options
+                    .map(o => ({ text: (o.text || '').trim(), correct: !!o.correct }))
+                    .filter(o => o.text);
+                if (opts.length < 2) return { error: 'Квиз ' + (i + 1) + ': минимум 2 варианта' };
+                if (opts.filter(o => o.correct).length !== 1) return { error: 'Квиз ' + (i + 1) + ': выбери ровно 1 правильный' };
+                const question = (q.question || '').trim();
+                if (!question) return { error: 'Квиз ' + (i + 1) + ': пустой вопрос' };
+                out.push({
+                    question,
+                    options: opts,
+                    solution: (q.solution || '').trim(),
+                    anonymous: true,
+                    close_period_sec: 0
+                });
+            }
+            return { quizzes: out };
+        }
+
+        function updateAudioChainUI() {
+            const section = document.getElementById('quiz-chain-section');
+            const legacyPoll = document.getElementById('quiz-options-group');
+            if (!section) return;
+            const isAudio = isAudioTemplate();
+            section.style.display = isAudio ? 'block' : 'none';
+            if (legacyPoll) {
+                // Audio template uses chain — hide the legacy single-poll group.
+                if (isAudio) legacyPoll.style.display = 'none';
+            }
+            if (isAudio) renderQuizChain();
+        }
+
+        window.addQuizToChain = addQuizToChain;
+        window.getQuizChainPayload = getQuizChainPayload;
+        window.renderQuizChain = renderQuizChain;
+        window.updateAudioChainUI = updateAudioChainUI;
+        window.isAudioTemplate = isAudioTemplate;
 
         // ═══════════ TTS (Azure Speech preview + payload) ═══════════
         function ttsBuildAutoText() {

@@ -409,7 +409,7 @@ def _truncate(s, n):
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
-async def _send_poll(entity, card, schedule_dt, image_b64, fallback_text, is_quiz):
+async def _send_poll(entity, card, schedule_dt, image_b64, fallback_text, is_quiz, reply_to=None):
     """
     Send a Telegram poll/quiz. If image_b64 present, send card image first as a
     separate scheduled message (1s before the poll), then the poll itself.
@@ -421,6 +421,8 @@ async def _send_poll(entity, card, schedule_dt, image_b64, fallback_text, is_qui
         solution: str              (quiz only; explanation shown after answer)
         close_period_sec: int      (auto-close after N seconds; 0 = never)
         anonymous: bool            (default true)
+
+    reply_to: optional parent message id (used by audio quiz-chain).
     """
     raw_options = card.get("options") or []
     options_struct = []
@@ -509,6 +511,8 @@ async def _send_poll(entity, card, schedule_dt, image_b64, fallback_text, is_qui
     poll_kwargs = {"file": media}
     if schedule_dt:
         poll_kwargs["schedule"] = schedule_dt
+    if reply_to:
+        poll_kwargs["reply_to"] = reply_to
     msg = await client.send_message(entity, **poll_kwargs)
 
     # If we have a quiz solution, send it as a follow-up message scheduled
@@ -1030,6 +1034,29 @@ async def handle_schedule(request):
 
             # Optional voice-note follow-up (Azure TTS)
             await _maybe_send_voice_reply(entity, card, msg.id, schedule_dt)
+
+            # Audio template: chain of polls as replies to the main message.
+            quiz_chain = card.get("quizzes") or []
+            if quiz_chain:
+                from datetime import timedelta as _td
+                for qi, qcard in enumerate(quiz_chain):
+                    sub_card = {
+                        "question": qcard.get("question"),
+                        "options": qcard.get("options"),
+                        "solution": qcard.get("solution"),
+                        "anonymous": qcard.get("anonymous", True),
+                        "multiple_choice": False,
+                        "close_period_sec": qcard.get("close_period_sec", 0),
+                    }
+                    sub_schedule = schedule_dt + _td(seconds=20 * (qi + 1)) if schedule_dt else None
+                    try:
+                        await _send_poll(
+                            entity, sub_card, sub_schedule, None, "",
+                            is_quiz=True, reply_to=msg.id,
+                        )
+                    except Exception as qe:
+                        log.warning("Chain quiz %d failed: %s", qi + 1, qe)
+                    await asyncio.sleep(0.2)
 
             # Append to local word history immediately so duplicate-check stays fresh.
             if word:

@@ -60,13 +60,21 @@
                                    'Klient: Hmm, ona zawsze narzeka, że nie mam dobrego gustu.\n' +
                                    'Sprzedawczyni: To proszę wziąć kartę podarunkową — niech sama wybierze.';
                     }
-                    // Seed 3 poll options
-                    if (typeof pollOptions !== 'undefined' && pollOptions.every(o => !o.text.trim())) {
-                        pollOptions.length = 0;
-                        pollOptions.push({ text: 'Klient chce kupić perfumy dla żony.', correct: false });
-                        pollOptions.push({ text: 'Sprzedawczyni proponuje kartę podarunkową, bo żona ma swój gust.', correct: true });
-                        pollOptions.push({ text: 'Klient i żona razem wybierają prezent.', correct: false });
-                        if (typeof renderPollOptions === 'function') renderPollOptions();
+                    // Seed quiz chain with one example quiz (only if pristine)
+                    if (typeof quizChain !== 'undefined'
+                        && quizChain.length === 1
+                        && !quizChain[0].question.trim()
+                        && quizChain[0].options.every(o => !o.text.trim())) {
+                        quizChain[0] = {
+                            question: 'O co chodzi w rozmowie?',
+                            options: [
+                                { text: 'Klient chce kupić perfumy dla żony.', correct: false },
+                                { text: 'Sprzedawczyni proponuje kartę podarunkową.', correct: true },
+                                { text: 'Klient i żona razem wybierają prezent.', correct: false },
+                            ],
+                            solution: 'Sprzedawczyni proponuje kartę podarunkową, żeby żona sama wybrała.'
+                        };
+                        if (typeof renderQuizChain === 'function') renderQuizChain();
                     }
                 }
 
@@ -361,7 +369,8 @@
                 decorPositions: JSON.parse(JSON.stringify(decorPositions)),
                 contentBlocks: JSON.parse(JSON.stringify(contentBlocks)),
                 blockGap: document.getElementById('block-gap').value,
-                blocksTop: document.getElementById('blocks-top').value
+                blocksTop: document.getElementById('blocks-top').value,
+                quizChain: (typeof quizChain !== 'undefined') ? JSON.parse(JSON.stringify(quizChain)) : null
             };
         }
 
@@ -475,6 +484,13 @@
             document.getElementById('translation-group').style.display = currentTemplate === 'slowo' ? 'block' : 'none';
             document.getElementById('example-group').style.display = ['slowo', 'blad', 'podsluchano'].includes(currentTemplate) ? 'block' : 'none';
             document.getElementById('quiz-options-group').style.display = currentTemplate === 'quiz' ? 'block' : 'none';
+
+            // Restore quiz chain (audio template)
+            if (Array.isArray(state.quizChain) && state.quizChain.length && typeof quizChain !== 'undefined') {
+                quizChain.length = 0;
+                state.quizChain.forEach(q => quizChain.push(JSON.parse(JSON.stringify(q))));
+                if (typeof renderQuizChain === 'function') renderQuizChain();
+            }
 
             // Restore content blocks
             contentBlocks = state.contentBlocks || [];

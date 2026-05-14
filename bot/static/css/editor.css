@@ -1125,6 +1125,75 @@ body.prod-active .panel--publish::before {
 }
 .poll-option-remove:hover { color: var(--c-red); background: var(--c-red-soft); }
 
+/* ─── Quiz chain (audio template) ─────────────────────────────── */
+#quiz-chain-list {
+    display: flex; flex-direction: column; gap: var(--s-3);
+    margin-top: var(--s-2);
+}
+.quiz-block {
+    border: 1px solid var(--c-line);
+    border-left: 3px solid var(--c-frog);
+    border-radius: var(--r-2);
+    padding: var(--s-2) var(--s-3);
+    background: var(--c-bg);
+    display: flex; flex-direction: column; gap: 6px;
+}
+.qb-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 2px;
+}
+.qb-no {
+    font-size: var(--fs-xs); font-weight: 700;
+    color: var(--c-frog-3); text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.qb-rm {
+    background: transparent; border: 0;
+    cursor: pointer; font-size: var(--fs-sm);
+    padding: 2px 6px; border-radius: var(--r-1);
+    color: var(--c-text-4);
+}
+.qb-rm:hover { color: var(--c-red); background: var(--c-red-soft); }
+.qb-q { font-size: var(--fs-sm); font-weight: 500; }
+.qb-opts {
+    display: flex; flex-direction: column; gap: 4px;
+}
+.qb-opt {
+    display: flex; align-items: center; gap: 6px;
+}
+.qb-opt input[type="radio"] { flex-shrink: 0; }
+.qb-opt-text { flex: 1; font-size: var(--fs-sm); }
+.qb-opt.correct .qb-opt-text {
+    border-color: var(--c-frog);
+    background: var(--c-soft);
+}
+.qb-opt-rm {
+    background: transparent; border: 0;
+    cursor: pointer;
+    color: var(--c-text-4);
+    padding: 2px 6px; border-radius: var(--r-1);
+}
+.qb-opt-rm:hover { color: var(--c-red); background: var(--c-red-soft); }
+.qb-add-opt {
+    align-self: flex-start;
+    background: transparent;
+    border: 1px dashed var(--c-line);
+    color: var(--c-text-3);
+    padding: 4px 10px;
+    border-radius: var(--r-2);
+    font-size: var(--fs-xs); font-weight: 600;
+    cursor: pointer;
+}
+.qb-add-opt:hover { border-color: var(--c-frog); color: var(--c-frog-3); }
+.qb-sol {
+    font-size: var(--fs-xs);
+    background: var(--c-amber-soft);
+    border-color: var(--c-amber);
+}
+#quiz-chain-section > .add-inline-btn {
+    margin-top: var(--s-2);
+}
+
 .poll-config {
     display: flex; flex-wrap: wrap; gap: var(--s-2);
     margin-top: var(--s-2);
