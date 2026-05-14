@@ -558,7 +558,9 @@ body.dark-theme .app-head h1 { color: var(--c-frog-2); }
     background: var(--c-bg-2);
     transition: all var(--t-fast);
 }
-.uploader:hover, .uploader.is-dragover {
+.uploader:hover,
+.uploader.is-dragover,
+.uploader.dragover {
     border-color: var(--c-frog);
     background: var(--c-soft);
 }
